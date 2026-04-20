@@ -20,42 +20,251 @@
     <link rel="manifest" href="/manifest.json" />
 
     <meta charset="utf-8">
-    <title>Template | UwU Apps</title>
+    <title>SG Bike Parking Helper | UwU Apps</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A simple template app; view live template at a glance!">
+    <meta name="description" content="Find bicycle parking locations near you!">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Template | UwU Apps" />
+    <meta property="og:title" content="SG Bike Parking Helper | UwU Apps" />
     <meta property="og:site_name" content="UwU Apps" />
-    <meta property="og:description" content="A simple template app; view live template at a glance!" />
+    <meta property="og:description" content="Find bicycle parking locations near you!" />
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Jua">
     <link rel="stylesheet" href="/style.css">
     <meta name="theme-color" content="#ccffcc" />
 
     <!-- Embed Image -->
-    <link rel="apple-touch-icon" href="/templateicon1.png">
+    <link rel="apple-touch-icon" href="/SBPH-main.png">
     <link rel="icon" href="/favicon.ico">
     <link rel="shortcut icon" href="/favicon.ico">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:image:src" content="/templateicon1.png">
-    <meta property="og:image" content="/templateicon1.png" />
+    <meta name="twitter:image:src" content="/SBPH-main.png">
+    <meta property="og:image" content="/SBPH-main.png" />
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script defer="" src="https://use.fontawesome.com/releases/v6.5.2/js/all.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 
 <body>
-    Template
+    <!-- ── Header -->
+    <header>
+        <div class="header-left">
+            <span class="app-logo">🚲</span>
+            <div class="app-title">
+                SG Bike Parking
+                <span>Locations updated monthly</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-icon" id="theme-btn" title="Change theme" aria-label="Change theme">🎨</button>
+        </div>
+    </header>
 
+    <!-- ── Main -->
+    <main>
+
+        <!-- Location & Search -->
+        <div class="glass location-bar">
+            <div class="location-status">
+                <div class="loc-dot loading" id="loc-dot"></div>
+                <span class="loc-text" id="loc-text">Waiting for location access…</span>
+                <button class="btn btn-secondary" id="loc-btn" title="Use my location">📍 My Location</button>
+            </div>
+            <div class="search-row">
+                <input type="text" class="search-input" id="search-input" placeholder="Search an address in Singapore…"
+                    autocomplete="off" />
+                <button class="btn btn-primary" id="search-btn">Search</button>
+            </div>
+            <div class="radius-row">
+                <span class="radius-label">Radius:</span>
+                <div class="radius-options">
+                    <button class="radius-btn active" data-radius="0.5">0.5 km</button>
+                    <button class="radius-btn" data-radius="1">1 km</button>
+                    <button class="radius-btn" data-radius="1.5">1.5 km</button>
+                    <button class="radius-btn" data-radius="2">2 km</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="glass filter-bar">
+            <span class="filter-label">Filter:</span>
+            <button class="filter-chip" id="filter-sheltered">☂ Sheltered Only</button>
+            <button class="filter-chip" id="filter-racks">🚲 Racks</button>
+            <button class="filter-chip" id="filter-ybox">🟨 Yellow Box</button>
+            <div class="filter-sep"></div>
+            <span class="filter-label">Sort:</span>
+            <select class="sort-select" id="sort-select">
+                <option value="distance">Nearest First</option>
+                <option value="count">Most Lots</option>
+                <option value="sheltered">Sheltered First</option>
+            </select>
+            <div class="view-toggle">
+                <button class="view-btn active" id="view-map" title="Map view">🗺️</button>
+                <button class="view-btn" id="view-list" title="List view">📋</button>
+            </div>
+        </div>
+
+        <!-- Result count -->
+        <span class="result-count" id="result-count"></span>
+
+        <!-- Content area -->
+        <div class="content-area">
+            <!-- Map -->
+            <div id="map-container">
+                <div id="main-map"></div>
+                <div class="map-attribution-note">📊 Locations directory only · Not real-time occupancy</div>
+            </div>
+
+            <!-- List view -->
+            <div id="list-view"></div>
+
+            <!-- Dynamic content -->
+            <div id="content-inner"></div>
+        </div>
+
+        <!-- Freshness note -->
+        <div class="freshness-note">
+            🕐 Locations updated monthly from LTA · This is a directory, not live availability
+        </div>
+
+    </main>
+
+    <!-- ── Theme Modal -->
+    <div class="modal-overlay" id="theme-modal" role="dialog" aria-modal="true" aria-label="Choose theme">
+        <div class="modal glass">
+            <div class="modal-handle"></div>
+            <div class="modal-title">
+                🎨 Choose Theme
+                <button class="modal-close" data-close-modal="theme-modal" aria-label="Close">✕</button>
+            </div>
+            <div class="theme-grid">
+                <button class="theme-option active" data-theme="classic">
+                    <span class="theme-swatch" style="background:#ccffcc"></span>
+                    Classic
+                </button>
+                <button class="theme-option" data-theme="notgreen1">
+                    <span class="theme-swatch" style="background:#ffcccc"></span>
+                    Not Green 1
+                </button>
+                <button class="theme-option" data-theme="notgreen2">
+                    <span class="theme-swatch" style="background:#ccccff"></span>
+                    Not Green 2
+                </button>
+                <button class="theme-option" data-theme="notgreen3">
+                    <span class="theme-swatch" style="background:#ffffcc"></span>
+                    Not Green 3
+                </button>
+                <button class="theme-option" data-theme="notgreen4">
+                    <span class="theme-swatch" style="background:#ffccff"></span>
+                    Not Green 4
+                </button>
+                <button class="theme-option" data-theme="notgreen5">
+                    <span class="theme-swatch" style="background:#ccffff"></span>
+                    Not Green 5
+                </button>
+                <button class="theme-option" data-theme="white" style="grid-column: 1 / -1">
+                    <span class="theme-swatch" style="background:#fff;border:1.5px solid #ddd"></span>
+                    Really Really Light Green
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Detail Modal -->
+    <div class="modal-overlay" id="detail-modal" role="dialog" aria-modal="true" aria-label="Parking details">
+        <div class="modal glass">
+            <div class="modal-handle"></div>
+            <div class="modal-title">
+                Parking Details
+                <button class="modal-close" data-close-modal="detail-modal" aria-label="Close">✕</button>
+            </div>
+
+            <div class="detail-header">
+                <span class="detail-rack-icon" id="detail-rack-icon">🚲</span>
+                <div class="detail-title" id="detail-title">Loading…</div>
+                <div class="detail-badges" id="detail-badges"></div>
+            </div>
+
+            <div class="detail-stats">
+                <div class="stat-cell">
+                    <span class="stat-value" id="detail-rack-count">—</span>
+                    <span class="stat-label">Total Lots</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-value" id="detail-distance">—</span>
+                    <span class="stat-label">Distance</span>
+                </div>
+            </div>
+
+            <div class="detail-coords" id="detail-coords"></div>
+
+            <div class="navigate-section">
+                <div class="navigate-section-title">Navigate With</div>
+                <div class="nav-options">
+                    <button class="nav-option-btn" id="nav-googlemaps">
+                        <span class="nav-icon">🗺️</span>
+                        <span class="nav-name">Google Maps</span>
+                    </button>
+                    <button class="nav-option-btn" id="nav-waze">
+                        <span class="nav-icon">🚗</span>
+                        <span class="nav-name">Waze</span>
+                    </button>
+                    <button class="nav-option-btn" id="nav-applemaps">
+                        <span class="nav-icon">🍎</span>
+                        <span class="nav-name">Apple Maps</span>
+                    </button>
+                    <button class="nav-option-btn" id="nav-osm">
+                        <span class="nav-icon">🌍</span>
+                        <span class="nav-name">OpenStreetMap</span>
+                    </button>
+                    <button class="nav-option-btn" id="btn-open-map-modal">
+                        <span class="nav-icon">📌</span>
+                        <span class="nav-name">In-App Map</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Map Modal -->
+    <div class="modal-overlay" id="map-modal" role="dialog" aria-modal="true" aria-label="Map view">
+        <div class="modal glass" style="max-width:560px">
+            <div class="modal-handle"></div>
+            <div class="modal-title">
+                📌 <span id="map-modal-title">Map</span>
+                <button class="modal-close" data-close-modal="map-modal" aria-label="Close">✕</button>
+            </div>
+
+            <div id="modal-map-container">
+                <div id="modal-map"></div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn btn-nav" style="flex:1;justify-content:center;padding:10px"
+                    id="map-modal-nav-google">🗺️ Google Maps</button>
+                <button class="btn btn-nav" style="flex:1;justify-content:center;padding:10px"
+                    id="map-modal-nav-waze">🚗 Waze</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Toast -->
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <!-- ── Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/map.js"></script>
     <script src="/script.js"></script>
 
     <script>
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('/sw.js');
         }
     </script>
-    
+
 </body>
 
 </html>
