@@ -278,7 +278,6 @@ async function fetchParking() {
             item._dist = haversine(lat, lng, item.Latitude, item.Longitude);
         });
 
-        if (items.length) console.log('[sgbikes debug] raw API fields:', Object.keys(items[0]), items[0]);
 
         state.results = items;
 
@@ -458,6 +457,7 @@ function renderList() {
         card.innerHTML = `
       <div class="card-icon ${rackClass(item.RackType)}">${rackIcon(item.RackType)}</div>
       <div class="card-body">
+        <div class="card-code-label">Parking Code</div>
         <div class="card-title">${item.Description}</div>
         <div class="card-meta">
           <span class="badge ${rackClass(item.RackType) === 'ybox' ? 'badge-ybox' : 'badge-rack'}">${item.RackType}</span>
@@ -504,6 +504,11 @@ function showDetailModal(item) {
 
     $('detail-rack-icon').innerHTML = rackIcon(item.RackType);
     $('detail-title').textContent = item.Description;
+
+    const copyBtn = $('copy-code-btn');
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(item.Description).then(() => showToast(`Copied: ${item.Description}`));
+    };
 
     const shelterBadge =
         item.ShelterIndicator === 'Y' ?
