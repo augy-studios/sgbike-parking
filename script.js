@@ -410,6 +410,10 @@ function renderEmpty(type) {
 }
 
 // ── Render list
+function isRentalZone(type) {
+    return type === 'Yellow Box' || type === 'HDB_RACKS';
+}
+
 function rackIcon(type) {
     if (type === 'Yellow Box') return ICONS.ybox;
     if (type === 'Racks') return ICONS.bike;
@@ -451,7 +455,7 @@ function renderList() {
             `<span class="badge badge-shelter">${ICONS.umbrella} Sheltered</span>` :
             '';
         const rentalBadge =
-            item.RackType === 'Yellow Box' ?
+            isRentalZone(item.RackType) ?
             `<span class="badge badge-rental">Rental Zone</span>` :
             '';
         card.innerHTML = `
@@ -523,7 +527,7 @@ function showDetailModal(item) {
         '—';
     $('detail-coords').textContent = `${item.Latitude.toFixed(6)}, ${item.Longitude.toFixed(6)}`;
 
-    $('detail-rental').style.display = item.RackType === 'Yellow Box' ? '' : 'none';
+    $('detail-rental').style.display = isRentalZone(item.RackType) ? '' : 'none';
 
     // pan to marker
     if (state.view === 'map') {
