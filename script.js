@@ -410,10 +410,6 @@ function renderEmpty(type) {
 }
 
 // ── Render list
-function isRentalZone(type) {
-    return type === 'Yellow Box' || type === 'HDB_RACKS';
-}
-
 function rackIcon(type) {
     if (type === 'Yellow Box') return ICONS.ybox;
     if (type === 'Racks') return ICONS.bike;
@@ -454,10 +450,6 @@ function renderList() {
             item.ShelterIndicator === 'Y' ?
             `<span class="badge badge-shelter">${ICONS.umbrella} Sheltered</span>` :
             '';
-        const rentalBadge =
-            isRentalZone(item.RackType) ?
-            `<span class="badge badge-rental">Rental Zone</span>` :
-            '';
         card.innerHTML = `
       <div class="card-icon ${rackClass(item.RackType)}">${rackIcon(item.RackType)}</div>
       <div class="card-body">
@@ -467,7 +459,6 @@ function renderList() {
           <span class="badge ${rackClass(item.RackType) === 'ybox' ? 'badge-ybox' : 'badge-rack'}">${item.RackType}</span>
           <span class="badge badge-count">${ICONS.hash} ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}</span>
           ${shelterBadge}
-          ${rentalBadge}
         </div>
         <div class="card-distance">${ICONS.ruler} ${fmtDist(item._dist)} away</div>
       </div>
@@ -526,8 +517,6 @@ function showDetailModal(item) {
         fmtDist(item._dist) :
         '—';
     $('detail-coords').textContent = `${item.Latitude.toFixed(6)}, ${item.Longitude.toFixed(6)}`;
-
-    $('detail-rental').style.display = isRentalZone(item.RackType) ? '' : 'none';
 
     // pan to marker
     if (state.view === 'map') {
