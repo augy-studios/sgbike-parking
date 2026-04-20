@@ -278,6 +278,8 @@ async function fetchParking() {
             item._dist = haversine(lat, lng, item.Latitude, item.Longitude);
         });
 
+        if (items.length) console.log('[sgbikes debug] raw API fields:', Object.keys(items[0]), items[0]);
+
         state.results = items;
 
         // cache to localStorage
