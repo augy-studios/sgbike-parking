@@ -31,6 +31,7 @@ const state = {
     loading: false,
     locationReady: false,
     currentDetail: null,
+    listPage: 0,
 };
 
 // ── DOM refs
@@ -353,6 +354,7 @@ function applyFiltersAndRender() {
     }
 
     state.filteredResults = items;
+    state.listPage = 0;
 
     els.resultCount.textContent = items.length ?
         `${items.length} location${items.length !== 1 ? 's' : ''} found` :
@@ -419,6 +421,8 @@ function rackClass(type) {
     return 'other';
 }
 
+const PAGE_SIZE = 10;
+
 function renderList() {
     const lv = $('list-view');
     lv.innerHTML = '';
@@ -433,7 +437,12 @@ function renderList() {
         return;
     }
 
-    state.filteredResults.forEach((item) => {
+    const total = state.filteredResults.length;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const page = state.listPage;
+    const pageItems = state.filteredResults.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+    pageItems.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'parking-card glass';
         const shelterBadge =
@@ -459,6 +468,27 @@ function renderList() {
         card.addEventListener('click', () => showDetailModal(item));
         lv.appendChild(card);
     });
+
+    if (totalPages > 1) {
+        const pager = document.createElement('div');
+        pager.className = 'pagination';
+        pager.innerHTML = `
+      <button class="btn btn-secondary pagination-prev" ${page === 0 ? 'disabled' : ''}>← Prev</button>
+      <span class="pagination-info">${page + 1} / ${totalPages}</span>
+      <button class="btn btn-secondary pagination-next" ${page >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+    `;
+        pager.querySelector('.pagination-prev').addEventListener('click', () => {
+            state.listPage--;
+            renderList();
+            lv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        pager.querySelector('.pagination-next').addEventListener('click', () => {
+            state.listPage++;
+            renderList();
+            lv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        lv.appendChild(pager);
+    }
 }
 
 // ── Detail modal
