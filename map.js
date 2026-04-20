@@ -8,8 +8,13 @@ const MapManager = (() => {
 
     // Icon factory
     function makeIcon(type, sheltered) {
-        const emoji = type === 'Yellow Box' ? '🟨' : '🟢';
         const shade = type === 'Yellow Box' ? '#f57f17' : '#2e7d32';
+        const label = type === 'Yellow Box' ? 'YB' : 'R';
+        const shelterBadge = sheltered ? `
+        <circle cx="28" cy="6" r="6" fill="#0277bd"/>
+        <path d="M24 6a4 4 0 0 1 8 0" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <line x1="28" y1="6" x2="28" y2="10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="26.5" y1="10" x2="28" y2="10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>` : '';
         const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
         <defs>
@@ -20,8 +25,8 @@ const MapManager = (() => {
         <ellipse cx="18" cy="40" rx="5" ry="2.5" fill="rgba(0,0,0,0.18)"/>
         <path d="M18 2 C10 2 4 8 4 16 C4 26 18 38 18 38 C18 38 32 26 32 16 C32 8 26 2 18 2Z"
               fill="${shade}" filter="url(#s)"/>
-        <text x="18" y="20" text-anchor="middle" font-size="14">${type === 'Yellow Box' ? '🅱' : '🚲'}</text>
-        ${sheltered ? `<circle cx="28" cy="6" r="6" fill="#0277bd"/><text x="28" y="10" text-anchor="middle" font-size="8" fill="#fff">☂</text>` : ''}
+        <text x="18" y="22" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="white">${label}</text>
+        ${shelterBadge}
       </svg>
     `;
         return L.divIcon({
@@ -75,7 +80,7 @@ const MapManager = (() => {
                 zIndexOffset: 1000
             })
             .addTo(mainMap)
-            .bindPopup('<div class="popup-title">📍 Your Location</div>');
+            .bindPopup('<div class="popup-title">Your Location</div>');
 
         radiusCircle = L.circle([lat, lng], {
             radius: radiusKm * 1000,
@@ -101,11 +106,11 @@ const MapManager = (() => {
                 })
                 .addTo(markersLayer);
 
-            const shelter = sheltered ? '<span style="color:#0277bd">☂ Sheltered</span>' : 'Unsheltered';
+            const shelter = sheltered ? '<span style="color:#0277bd">Sheltered</span>' : 'Unsheltered';
             marker.bindPopup(`
         <div class="popup-title">${item.Description}</div>
         <div class="popup-meta">
-          🚲 ${item.RackType} · ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}<br>
+          ${item.RackType} · ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}<br>
           ${shelter}
         </div>
         <button class="popup-btn" onclick="window._selectParking('${encodeURIComponent(JSON.stringify(item))}')">

@@ -50,14 +50,15 @@
     <!-- ── Header -->
     <header>
         <div class="header-left">
-            <span class="app-logo">🚲</span>
+            <span class="app-logo"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg></span>
             <div class="app-title">
                 SG Bike Parking
                 <span>Locations updated monthly</span>
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn btn-icon" id="theme-btn" title="Change theme" aria-label="Change theme">🎨</button>
+            <a href="https://donate.stripe.com/28o2akeAr3hv0DK6oo" target="_blank" rel="noopener noreferrer" class="btn btn-icon" id="coffee-btn" title="Buy Augy a Coffee" aria-label="Buy Augy a Coffee"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg></a>
+            <button class="btn btn-icon" id="theme-btn" title="Change theme" aria-label="Change theme"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></button>
         </div>
     </header>
 
@@ -69,7 +70,7 @@
             <div class="location-status">
                 <div class="loc-dot loading" id="loc-dot"></div>
                 <span class="loc-text" id="loc-text">Waiting for location access…</span>
-                <button class="btn btn-secondary" id="loc-btn" title="Use my location">📍 My Location</button>
+                <button class="btn btn-secondary" id="loc-btn" title="Use my location"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> My Location</button>
             </div>
             <div class="search-row">
                 <input type="text" class="search-input" id="search-input" placeholder="Search an address in Singapore…"
@@ -90,9 +91,9 @@
         <!-- Filter bar -->
         <div class="glass filter-bar">
             <span class="filter-label">Filter:</span>
-            <button class="filter-chip" id="filter-sheltered">☂ Sheltered Only</button>
-            <button class="filter-chip" id="filter-racks">🚲 Racks</button>
-            <button class="filter-chip" id="filter-ybox">🟨 Yellow Box</button>
+            <button class="filter-chip" id="filter-sheltered"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 12a11.05 11.05 0 0 0-22 0zm-5 7a3 3 0 0 1-6 0v-7"/></svg> Sheltered Only</button>
+            <button class="filter-chip" id="filter-racks"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg> Racks</button>
+            <button class="filter-chip" id="filter-ybox"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Yellow Box</button>
             <div class="filter-sep"></div>
             <span class="filter-label">Sort:</span>
             <select class="sort-select" id="sort-select">
@@ -101,8 +102,8 @@
                 <option value="sheltered">Sheltered First</option>
             </select>
             <div class="view-toggle">
-                <button class="view-btn active" id="view-map" title="Map view">🗺️</button>
-                <button class="view-btn" id="view-list" title="List view">📋</button>
+                <button class="view-btn active" id="view-map" title="Map view"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg></button>
+                <button class="view-btn" id="view-list" title="List view"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg></button>
             </div>
         </div>
 
@@ -114,7 +115,7 @@
             <!-- Map -->
             <div id="map-container">
                 <div id="main-map"></div>
-                <div class="map-attribution-note">📊 Locations directory only · Not real-time occupancy</div>
+                <div class="map-attribution-note"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg> Locations directory only · Not real-time occupancy</div>
             </div>
 
             <!-- List view -->
@@ -126,7 +127,7 @@
 
         <!-- Freshness note -->
         <div class="freshness-note">
-            🕐 Locations updated monthly from LTA · This is a directory, not live availability
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Locations updated monthly from LTA · This is a directory, not live availability. · Made with <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> by Augy
         </div>
 
     </main>
@@ -136,7 +137,7 @@
         <div class="modal glass">
             <div class="modal-handle"></div>
             <div class="modal-title">
-                🎨 Choose Theme
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg> Choose Theme
                 <button class="modal-close" data-close-modal="theme-modal" aria-label="Close">✕</button>
             </div>
             <div class="theme-grid">
@@ -182,7 +183,7 @@
             </div>
 
             <div class="detail-header">
-                <span class="detail-rack-icon" id="detail-rack-icon">🚲</span>
+                <span class="detail-rack-icon" id="detail-rack-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg></span>
                 <div class="detail-title" id="detail-title">Loading…</div>
                 <div class="detail-badges" id="detail-badges"></div>
             </div>
@@ -204,23 +205,23 @@
                 <div class="navigate-section-title">Navigate With</div>
                 <div class="nav-options">
                     <button class="nav-option-btn" id="nav-googlemaps">
-                        <span class="nav-icon">🗺️</span>
+                        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg></span>
                         <span class="nav-name">Google Maps</span>
                     </button>
                     <button class="nav-option-btn" id="nav-waze">
-                        <span class="nav-icon">🚗</span>
+                        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 17H5v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5l1.34-4A2 2 0 0 1 5.22 8H18.8a2 2 0 0 1 1.88 1.28L22 13v5h-1a1 1 0 0 1-1-1v-1Z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg></span>
                         <span class="nav-name">Waze</span>
                     </button>
                     <button class="nav-option-btn" id="nav-applemaps">
-                        <span class="nav-icon">🍎</span>
+                        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
                         <span class="nav-name">Apple Maps</span>
                     </button>
                     <button class="nav-option-btn" id="nav-osm">
-                        <span class="nav-icon">🌍</span>
+                        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
                         <span class="nav-name">OpenStreetMap</span>
                     </button>
                     <button class="nav-option-btn" id="btn-open-map-modal">
-                        <span class="nav-icon">📌</span>
+                        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg></span>
                         <span class="nav-name">In-App Map</span>
                     </button>
                 </div>
@@ -234,7 +235,7 @@
         <div class="modal glass" style="max-width:560px">
             <div class="modal-handle"></div>
             <div class="modal-title">
-                📌 <span id="map-modal-title">Map</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> <span id="map-modal-title">Map</span>
                 <button class="modal-close" data-close-modal="map-modal" aria-label="Close">✕</button>
             </div>
 
@@ -244,9 +245,9 @@
 
             <div style="display:flex;gap:8px;margin-top:12px">
                 <button class="btn btn-nav" style="flex:1;justify-content:center;padding:10px"
-                    id="map-modal-nav-google">🗺️ Google Maps</button>
+                    id="map-modal-nav-google"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg> Google Maps</button>
                 <button class="btn btn-nav" style="flex:1;justify-content:center;padding:10px"
-                    id="map-modal-nav-waze">🚗 Waze</button>
+                    id="map-modal-nav-waze"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 17H5v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5l1.34-4A2 2 0 0 1 5.22 8H18.8a2 2 0 0 1 1.88 1.28L22 13v5h-1a1 1 0 0 1-1-1v-1Z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg> Waze</button>
             </div>
         </div>
     </div>

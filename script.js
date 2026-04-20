@@ -1,3 +1,16 @@
+// ── SVG Icons
+const ICONS = {
+    bike: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`,
+    ybox: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
+    parking: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`,
+    pin: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,
+    umbrella: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 12a11.05 11.05 0 0 0-22 0zm-5 7a3 3 0 0 1-6 0v-7"/></svg>`,
+    cloud: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`,
+    warning: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`,
+    hash: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>`,
+    ruler: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>`,
+};
+
 // ── State
 const state = {
     userLat: null,
@@ -360,6 +373,8 @@ function setLoading(on) {
         <div class="spinner"></div>
         <div class="spinner-text">Fetching nearby bicycle parking…</div>
       </div>`;
+    } else {
+        inner.innerHTML = '';
     }
 }
 
@@ -368,7 +383,7 @@ function renderEmpty(type) {
     if (type === 'no-location') {
         inner.innerHTML = `
       <div class="state-box glass">
-        <div class="state-icon">📍</div>
+        <div class="state-icon">${ICONS.pin}</div>
         <div class="state-title">Allow Location Access</div>
         <div class="state-sub">SG Bike Parking needs your location to find nearby bicycle parking spots.</div>
         <button class="btn btn-primary" onclick="getLocation()">Enable Location</button>
@@ -376,14 +391,14 @@ function renderEmpty(type) {
     } else if (type === 'no-results') {
         inner.innerHTML = `
       <div class="state-box glass">
-        <div class="state-icon">🚲</div>
+        <div class="state-icon">${ICONS.bike}</div>
         <div class="state-title">No Parking Found</div>
         <div class="state-sub">No bicycle parking within ${state.radius}km. Try increasing the search radius.</div>
       </div>`;
     } else {
         inner.innerHTML = `
       <div class="state-box glass">
-        <div class="state-icon">⚠️</div>
+        <div class="state-icon">${ICONS.warning}</div>
         <div class="state-title">Could Not Load Data</div>
         <div class="state-sub">Check your connection and try again. Cached results will be used if available.</div>
         <button class="btn btn-primary" onclick="fetchParking()">Retry</button>
@@ -393,9 +408,9 @@ function renderEmpty(type) {
 
 // ── Render list
 function rackIcon(type) {
-    if (type === 'Yellow Box') return '🟨';
-    if (type === 'Racks') return '🚲';
-    return '🅿️';
+    if (type === 'Yellow Box') return ICONS.ybox;
+    if (type === 'Racks') return ICONS.bike;
+    return ICONS.parking;
 }
 
 function rackClass(type) {
@@ -411,7 +426,7 @@ function renderList() {
     if (!state.filteredResults.length) {
         lv.innerHTML = `
       <div class="state-box glass">
-        <div class="state-icon">🚲</div>
+        <div class="state-icon">${ICONS.bike}</div>
         <div class="state-title">No results</div>
         <div class="state-sub">Try adjusting your filters or expanding the radius.</div>
       </div>`;
@@ -423,7 +438,7 @@ function renderList() {
         card.className = 'parking-card glass';
         const shelterBadge =
             item.ShelterIndicator === 'Y' ?
-            `<span class="badge badge-shelter">☂ Sheltered</span>` :
+            `<span class="badge badge-shelter">${ICONS.umbrella} Sheltered</span>` :
             '';
         card.innerHTML = `
       <div class="card-icon ${rackClass(item.RackType)}">${rackIcon(item.RackType)}</div>
@@ -431,10 +446,10 @@ function renderList() {
         <div class="card-title">${item.Description}</div>
         <div class="card-meta">
           <span class="badge ${rackClass(item.RackType) === 'ybox' ? 'badge-ybox' : 'badge-rack'}">${item.RackType}</span>
-          <span class="badge badge-count">🔢 ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}</span>
+          <span class="badge badge-count">${ICONS.hash} ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}</span>
           ${shelterBadge}
         </div>
-        <div class="card-distance">📏 ${fmtDist(item._dist)} away</div>
+        <div class="card-distance">${ICONS.ruler} ${fmtDist(item._dist)} away</div>
       </div>
       <div class="card-actions">
         <button class="btn btn-secondary" style="font-size:0.78rem;padding:6px 10px">Details →</button>
@@ -450,13 +465,13 @@ function renderList() {
 function showDetailModal(item) {
     state.currentDetail = item;
 
-    $('detail-rack-icon').textContent = rackIcon(item.RackType);
+    $('detail-rack-icon').innerHTML = rackIcon(item.RackType);
     $('detail-title').textContent = item.Description;
 
     const shelterBadge =
         item.ShelterIndicator === 'Y' ?
-        `<span class="badge badge-shelter">☂ Sheltered</span>` :
-        `<span class="badge badge-other">⛅ Unsheltered</span>`;
+        `<span class="badge badge-shelter">${ICONS.umbrella} Sheltered</span>` :
+        `<span class="badge badge-other">${ICONS.cloud} Unsheltered</span>`;
     const rackBadge = `<span class="badge ${item.RackType === 'Yellow Box' ? 'badge-ybox' : 'badge-rack'}">${item.RackType}</span>`;
     $('detail-badges').innerHTML = rackBadge + shelterBadge;
 

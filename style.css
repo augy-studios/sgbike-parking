@@ -169,8 +169,8 @@ html {
 }
 
 body {
-  font-family: 'Nunito', sans-serif;
-  background: linear-gradient(135deg, var(--bg-grad-a) 0%, var(--bg-grad-b) 100%);
+  font-family: 'Jua', sans-serif;
+  background: var(--bg-base);
   min-height: 100vh;
   color: var(--text-primary);
   transition: background 0.4s ease, color 0.3s ease;
@@ -226,7 +226,7 @@ header {
 .app-title span {
   display: block;
   font-size: 0.65rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   font-weight: 500;
   color: var(--text-muted);
   letter-spacing: 0.04em;
@@ -241,7 +241,7 @@ header {
 
 /* ── Buttons ── */
 .btn {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   font-weight: 700;
   cursor: pointer;
   border: none;
@@ -403,7 +403,7 @@ main {
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(8px);
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   font-size: 0.9rem;
   color: var(--text-primary);
   outline: none;
@@ -451,7 +451,7 @@ main {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
 }
 
 .radius-btn.active,
@@ -491,7 +491,7 @@ main {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   transition: all 0.2s;
   user-select: none;
 }
@@ -520,7 +520,7 @@ main {
   background: rgba(255, 255, 255, 0.35);
   color: var(--text-primary);
   font-size: 0.8rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   font-weight: 600;
   cursor: pointer;
   outline: none;
@@ -550,7 +550,7 @@ main {
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
 }
 
 .view-btn.active {
@@ -728,6 +728,9 @@ main {
 .state-icon {
   font-size: 52px;
   margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .state-title {
@@ -897,7 +900,7 @@ main {
   cursor: pointer;
   transition: all 0.2s;
   background: rgba(255, 255, 255, 0.3);
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -1022,7 +1025,7 @@ main {
   background: rgba(255, 255, 255, 0.3);
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   color: var(--text-primary);
 }
 
@@ -1093,7 +1096,7 @@ main {
   box-shadow: 0 8px 24px var(--glass-shadow) !important;
   border-radius: 14px !important;
   color: var(--text-primary) !important;
-  font-family: 'Nunito', sans-serif !important;
+  font-family: 'Jua', sans-serif !important;
 }
 
 .leaflet-popup-tip {
@@ -1120,11 +1123,24 @@ main {
   border: none;
   border-radius: 8px;
   padding: 6px 12px;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Jua', sans-serif;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   width: 100%;
+}
+
+/* ── SVG Icons ── */
+svg[aria-hidden="true"] {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.detail-rack-icon {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
 }
 
 /* ── Responsive ── */
