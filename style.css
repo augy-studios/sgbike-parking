@@ -1212,7 +1212,7 @@ svg[aria-hidden="true"] {
   }
 
   #map-container {
-    height: 340px;
+    height: clamp(250px, calc(100dvh - 430px), 600px);
   }
 
   .theme-grid {
@@ -1328,7 +1328,7 @@ svg[aria-hidden="true"] {
 
   /* Map */
   #map-container {
-    height: 280px;
+    height: clamp(220px, calc(100dvh - 390px), 550px);
   }
 
   /* Cards */
