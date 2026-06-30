@@ -1,10 +1,19 @@
+import { verifySignedRequest } from '../lib/uwu-request-signing-server.js';
+import { getSupabaseClient } from '../lib/uwu-supabase-rest.js';
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Request-Token, X-Request-TS, X-Key-ID');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
+    }
+
+    const supabase = getSupabaseClient();
+    const { valid, reason } = await verifySignedRequest(req, supabase);
+    if (!valid) {
+        return res.status(403).json({ error: `request signature invalid: ${reason}` });
     }
 
     const {

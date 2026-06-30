@@ -268,7 +268,7 @@ async function fetchParking() {
     setLoading(true);
 
     try {
-        const res = await fetch(`/api/bicycle-parking?lat=${lat}&long=${lng}&dist=${dist}`);
+        const res = await UwuSigning.signedFetch(`/api/bicycle-parking?lat=${lat}&long=${lng}&dist=${dist}`);
         if (!res.ok) throw new Error(`API error ${res.status}`);
         const data = await res.json();
         const items = data.value || [];
@@ -605,10 +605,13 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── Init
-(function init() {
+(async function init() {
     // reset content
     const inner = $('content-inner');
     inner.innerHTML = '';
+
+    // no login on this site — every visitor is a guest, get a signing key before any API call
+    await UwuSigning.initGuestKey('sg-bike-parking-finder');
 
     getLocation();
 
