@@ -1,16 +1,3 @@
-// ── SVG Icons
-const ICONS = {
-    bike: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`,
-    ybox: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
-    parking: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`,
-    pin: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,
-    umbrella: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 12a11.05 11.05 0 0 0-22 0zm-5 7a3 3 0 0 1-6 0v-7"/></svg>`,
-    cloud: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`,
-    warning: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`,
-    hash: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>`,
-    ruler: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>`,
-};
-
 // ── State
 const state = {
     userLat: null,
@@ -20,7 +7,6 @@ const state = {
     radius: 0.5,
     results: [],
     filteredResults: [],
-    theme: localStorage.getItem('sgbikes_theme') || 'classic',
     view: 'map', // 'map' | 'list'
     filters: {
         sheltered: false,
@@ -53,32 +39,77 @@ const els = {
     listView: $('list-view'),
     contentInner: $('content-inner'),
     resultCount: $('result-count'),
-    themeBtn: $('theme-btn'),
-    themeModal: $('theme-modal'),
     detailModal: $('detail-modal'),
     mapModal: $('map-modal'),
     toast: $('toast'),
 };
 
 // ── Theme
-function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    state.theme = theme;
-    localStorage.setItem('sgbikes_theme', theme);
-    document.querySelectorAll('.theme-option').forEach((opt) => {
-        opt.classList.toggle('active', opt.dataset.theme === theme);
+function buildThemeModal() {
+    const grid = $('swatchGrid');
+    grid.innerHTML = COLOR_THEMES.map(
+        (t) => `
+      <button class="swatch" data-theme-id="${t.id}" style="--swatch-color:${t.hex}" type="button" aria-label="${t.label}">
+        <span class="swatch-dot"></span>
+        <span class="swatch-label">${t.label}</span>
+      </button>`
+    ).join('');
+
+    syncThemeModalState();
+
+    grid.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-theme-id]');
+        if (!btn) return;
+        applyColorTheme(btn.dataset.themeId);
+        syncThemeModalState();
+    });
+
+    $('modeToggle').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-mode]');
+        if (!btn) return;
+        applyMode(btn.dataset.mode);
+        syncThemeModalState();
     });
 }
 
-applyTheme(state.theme);
-
-els.themeBtn.addEventListener('click', () => openModal(els.themeModal));
-
-document.querySelectorAll('.theme-option').forEach((opt) => {
-    opt.addEventListener('click', () => {
-        applyTheme(opt.dataset.theme);
+function syncThemeModalState() {
+    const activeTheme = getStoredColorTheme();
+    const activeMode = getStoredMode();
+    document.querySelectorAll('#swatchGrid .swatch').forEach((el) => {
+        el.classList.toggle('active', el.dataset.themeId === activeTheme);
     });
-});
+    document.querySelectorAll('#modeToggle .mode-btn').forEach((el) => {
+        const on = el.dataset.mode === activeMode;
+        el.classList.toggle('active', on);
+        el.setAttribute('aria-pressed', String(on));
+    });
+    updateThemeButtonIcon();
+}
+
+function updateThemeButtonIcon() {
+    const span = document.querySelector('#themeBtn [data-icon]');
+    span.setAttribute('data-icon', getStoredMode() === 'dark' ? 'moon' : 'sun');
+    hydrateIcons($('themeBtn'));
+}
+
+function wireModals() {
+    document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+        btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
+    });
+    document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closeModal(backdrop.id);
+        });
+    });
+    $('themeBtn').addEventListener('click', () => openModal('themeModal'));
+
+    // Leaflet teardown for the in-app map modal, previously inside closeModal.
+    els.mapModal.addEventListener('click', (e) => {
+        if (e.target === els.mapModal || e.target.closest('[data-close-modal="map-modal"]')) {
+            MapManager.destroyModal();
+        }
+    });
+}
 
 // ── Toast
 let toastTimer;
@@ -89,31 +120,6 @@ function showToast(msg) {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2800);
 }
-
-// ── Modal helpers
-function openModal(el) {
-    el.classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal(el) {
-    el.classList.remove('open');
-    document.body.style.overflow = '';
-    if (el === els.mapModal) MapManager.destroyModal();
-}
-
-document.querySelectorAll('[data-close-modal]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-        const target = document.getElementById(btn.dataset.closeModal);
-        if (target) closeModal(target);
-    });
-});
-
-document.querySelectorAll('.modal-overlay').forEach((overlay) => {
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal(overlay);
-    });
-});
 
 // ── Location
 function setLocStatus(status, text) {
@@ -315,7 +321,7 @@ function loadFromCache(lat, lng) {
         });
         state.results = cached.items;
         const age = Math.round((Date.now() - cached.ts) / 86400000);
-        showToast(`Offline mode — showing cached data (${age}d old)`);
+        showToast(`Offline mode, showing cached data (${age}d old)`);
         applyFiltersAndRender();
     } catch (_) {
         renderEmpty('error');
@@ -515,7 +521,7 @@ function showDetailModal(item) {
     $('detail-rack-count').textContent = item.RackCount;
     $('detail-distance').textContent = state.searchLat ?
         fmtDist(item._dist) :
-        '—';
+        '-';
     $('detail-coords').textContent = `${item.Latitude.toFixed(6)}, ${item.Longitude.toFixed(6)}`;
 
     // pan to marker
@@ -523,7 +529,7 @@ function showDetailModal(item) {
         MapManager.panTo(item.Latitude, item.Longitude);
     }
 
-    openModal(els.detailModal);
+    openModal('detail-modal');
 }
 
 // Navigate buttons
@@ -566,8 +572,8 @@ document.getElementById('nav-osm').addEventListener('click', () => {
 
 document.getElementById('btn-open-map-modal').addEventListener('click', () => {
     if (!state.currentDetail) return;
-    closeModal(els.detailModal);
-    openModal(els.mapModal);
+    closeModal('detail-modal');
+    openModal('map-modal');
     MapManager.initModal(state.currentDetail.Latitude, state.currentDetail.Longitude);
     // update map modal title
     $('map-modal-title').textContent = state.currentDetail.Description;
@@ -610,7 +616,13 @@ if ('serviceWorker' in navigator) {
     const inner = $('content-inner');
     inner.innerHTML = '';
 
-    // no login on this site — every visitor is a guest, get a signing key before any API call
+    initTheme();
+    hydrateIcons();
+    updateThemeButtonIcon();
+    buildThemeModal();
+    wireModals();
+
+    // no login on this site, every visitor is a guest, get a signing key before any API call
     await UwuSigning.initGuestKey('sg-bike-parking-finder');
 
     getLocation();

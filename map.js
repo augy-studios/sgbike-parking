@@ -106,7 +106,7 @@ const MapManager = (() => {
                 })
                 .addTo(markersLayer);
 
-            const shelter = sheltered ? '<span style="color:#0277bd">Sheltered</span>' : 'Unsheltered';
+            const shelter = sheltered ? '<span class="popup-shelter">Sheltered</span>' : 'Unsheltered';
             marker.bindPopup(`
         <div class="popup-title">${item.Description}</div>
         <div class="popup-meta">

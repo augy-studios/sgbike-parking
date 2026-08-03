@@ -1,4 +1,4 @@
-const CACHE = "sg-bikes-v1";
+const CACHE = "sg-bikes-v2";
 
 const ASSETS = [
   '/',
@@ -6,6 +6,9 @@ const ASSETS = [
   '/style.css',
   '/app.js',
   '/map.js',
+  '/js/icons.js',
+  '/js/ui.js',
+  '/js/theme.js',
   '/manifest.json'
 ];
 
@@ -27,7 +30,7 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch — network first for API, cache first for static
+// Fetch: network first for API, cache first for static
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
