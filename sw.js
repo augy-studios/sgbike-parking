@@ -1,4 +1,4 @@
-const CACHE = "sg-bikes-v2";
+const CACHE = "sg-bikes-v3";
 
 const ASSETS = [
   '/',
