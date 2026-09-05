@@ -12,6 +12,7 @@ rpc keeps linking and merging atomic.
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -54,10 +55,37 @@ async def close() -> None:
         _client = None
 
 
+UNIQUE_VIOLATION = "23505"
+
+
+class SupabaseError(RuntimeError):
+    """A non 2xx answer from PostgREST, carrying enough of it to act on.
+
+    A caller that can recover from one particular failure, such as inserting a
+    row that is already there, needs the Postgres SQLSTATE to match against
+    rather than a formatted string.
+    """
+
+    def __init__(self, status: int, method: str, path: str, body: str) -> None:
+        super().__init__(f"Supabase {status} on {method} {path}: {body}")
+        self.status = status
+        self.body = body
+        try:
+            parsed = json.loads(body)
+        except ValueError:
+            parsed = None
+        self.details = parsed if isinstance(parsed, dict) else {}
+
+    @property
+    def code(self) -> str:
+        """The SQLSTATE Postgres reported, empty if PostgREST sent none."""
+        return str(self.details.get("code") or "")
+
+
 async def _request(method: str, path: str, **kwargs) -> Any:
     res = await client().request(method, path, **kwargs)
     if res.status_code >= 400:
-        raise RuntimeError(f"Supabase {res.status_code} on {method} {path}: {res.text}")
+        raise SupabaseError(res.status_code, method, path, res.text)
     if not res.content:
         return None
     return res.json()
@@ -179,23 +207,36 @@ async def is_favourite(telegram_id: int, code: str) -> bool:
 
 
 async def add_favourite(telegram_id: int, spot: dict) -> None:
-    """Saving something already saved is a no-op, enforced by a unique index."""
-    await insert(
-        TABLE_FAVOURITES,
-        {
-            "telegram_id": telegram_id,
-            "device_id": None,
-            "code": spot["code"],
-            "description": spot.get("description") or spot["code"],
-            "rack_type": spot.get("rack_type"),
-            "rack_count": spot.get("rack_count"),
-            "sheltered": bool(spot.get("sheltered")),
-            "latitude": spot.get("latitude"),
-            "longitude": spot.get("longitude"),
-        },
-        upsert=True,
-        on_conflict="telegram_id,code",
-    )
+    """Save one spot. Saving something already saved is a no-op.
+
+    This deliberately does not ask PostgREST for an upsert. The unique index
+    behind it was created partial, `where telegram_id is not null`, and Postgres
+    only infers a partial index as an ON CONFLICT arbiter when the statement
+    repeats that predicate, which the on_conflict parameter cannot express. The
+    upsert therefore came back as a 400 and every tap of the star failed.
+    Inserting plainly and treating the duplicate as success asks nothing of the
+    index shape, so it holds whether or not 0003 has been run.
+    """
+    try:
+        await insert(
+            TABLE_FAVOURITES,
+            {
+                "telegram_id": telegram_id,
+                "device_id": None,
+                "code": spot["code"],
+                "description": spot.get("description") or spot["code"],
+                "rack_type": spot.get("rack_type"),
+                "rack_count": spot.get("rack_count"),
+                "sheltered": bool(spot.get("sheltered")),
+                "latitude": spot.get("latitude"),
+                "longitude": spot.get("longitude"),
+            },
+        )
+    except SupabaseError as err:
+        # Two taps racing each other, or a stale button. Already saved is the
+        # outcome the caller wanted either way.
+        if err.code != UNIQUE_VIOLATION:
+            raise
 
 
 async def remove_favourite(telegram_id: int, code: str) -> int:

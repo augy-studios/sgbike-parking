@@ -8,7 +8,7 @@
 //
 // Every call carries X-Device-Id and X-Device-Secret.
 
-import { select, insert, remove } from './_lib/supabase.js';
+import { select, insert, remove, UNIQUE_VIOLATION } from './_lib/supabase.js';
 import {
     applyCors,
     fail,
@@ -74,11 +74,18 @@ async function add(req, res, owner) {
         longitude: Number.isFinite(Number(body.longitude)) ? Number(body.longitude) : null,
     };
 
-    // The unique indexes make a repeat save a no-op rather than an error.
-    const conflict = owner.linked ? 'telegram_id,code' : 'device_id,code';
-    const rows = await insert('sgbp_favourites', row, { upsert: true, onConflict: conflict });
-
-    return res.status(200).json({ ok: true, favourite: (rows && rows[0]) || row });
+    // Not an upsert. The unique indexes were created partial, and Postgres only
+    // infers a partial index as an ON CONFLICT arbiter when the statement
+    // repeats the predicate, which on_conflict cannot express, so asking for an
+    // upsert came back as a 400. A plain insert with the duplicate treated as
+    // success is a repeat save being a no-op either way.
+    try {
+        const rows = await insert('sgbp_favourites', row);
+        return res.status(200).json({ ok: true, favourite: (rows && rows[0]) || row });
+    } catch (err) {
+        if (err.code !== UNIQUE_VIOLATION) throw err;
+        return res.status(200).json({ ok: true, favourite: row, duplicate: true });
+    }
 }
 
 async function drop(req, res, owner) {

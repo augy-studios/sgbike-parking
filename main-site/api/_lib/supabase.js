@@ -21,11 +21,22 @@ function headers(extra = {}) {
     };
 }
 
+/** Postgres SQLSTATE for a unique index violation, passed through by PostgREST. */
+export const UNIQUE_VIOLATION = '23505';
+
 async function parse(res) {
     const text = await res.text();
     if (!res.ok) {
         const err = new Error(`Supabase ${res.status}: ${text}`);
         err.status = res.status;
+        err.body = text;
+        // The SQLSTATE is the only reliable way to tell a row that is already
+        // there from any other failure, so carry it on the error.
+        try {
+            err.code = (JSON.parse(text) || {}).code;
+        } catch {
+            err.code = undefined;
+        }
         throw err;
     }
     return text ? JSON.parse(text) : null;

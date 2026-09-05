@@ -18,6 +18,7 @@ to run twice, so re-running one does not break anything.
 | --- | --- |
 | `0001_telegram_favourites_sync.sql` | Devices, Telegram users, links, link tokens, favourites, backup codes, and the atomic link and merge functions. |
 | `0002_rate_limits_and_longer_codes.sql` | A durable rate limit counter for the serverless endpoints, cleanup of spent windows and abandoned devices. Pairs with twelve character backup codes in the API. |
+| `0003_favourite_upsert_arbiters.sql` | Replaces the partial unique indexes on `sgbp_favourites` with plain ones, so `on_conflict` can name them. Postgres refuses to infer a partial index as an arbiter, which made every favourite upsert fail with a 400. |
 
 ## Security
 
