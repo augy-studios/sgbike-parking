@@ -1,14 +1,17 @@
-const CACHE = "sg-bikes-v4";
+const CACHE = "sg-bikes-v5";
 
+// addAll is all or nothing, so a path that 404s takes the whole install down
+// with it. Keep this list in step with the script tags in index.html.
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
-  '/app.js',
+  '/script.js',
   '/map.js',
   '/js/icons.js',
   '/js/ui.js',
   '/js/theme.js',
+  '/js/sync.js',
   '/manifest.json'
 ];
 
@@ -33,6 +36,16 @@ self.addEventListener("activate", (event) => {
 // Fetch: network first for API, cache first for static
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // Sync endpoints are per device and must never be cached or replayed.
+  if (
+    url.pathname === '/api/favourites' ||
+    url.pathname === '/api/device' ||
+    url.pathname === '/api/link' ||
+    url.pathname === '/api/backup-codes'
+  ) {
+    return;
+  }
 
   // API calls: network first, fall back to cache
   if (url.pathname.startsWith('/api/')) {

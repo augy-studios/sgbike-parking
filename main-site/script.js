@@ -7,7 +7,7 @@ const state = {
     radius: 0.5,
     results: [],
     filteredResults: [],
-    view: 'map', // 'map' | 'list'
+    view: 'map', // 'map' | 'list' | 'fav'
     filters: {
         sheltered: false,
         racks: false,
@@ -18,6 +18,7 @@ const state = {
     locationReady: false,
     currentDetail: null,
     listPage: 0,
+    favPage: 0,
 };
 
 // ── DOM refs
@@ -35,6 +36,7 @@ const els = {
     sortSelect: $('sort-select'),
     viewMap: $('view-map'),
     viewList: $('view-list'),
+    viewFav: $('view-fav'),
     mapContainer: $('map-container'),
     listView: $('list-view'),
     contentInner: $('content-inner'),
@@ -243,23 +245,33 @@ els.sortSelect.addEventListener('change', () => {
 });
 
 // ── View toggle
-els.viewMap.addEventListener('click', () => {
-    state.view = 'map';
-    els.viewMap.classList.add('active');
-    els.viewList.classList.remove('active');
-    els.mapContainer.style.display = '';
-    $('list-view').classList.remove('active');
-    setTimeout(() => MapManager.invalidateSize(), 100);
-});
+function setView(view) {
+    state.view = view;
+    [els.viewMap, els.viewList, els.viewFav].forEach((btn) => btn.classList.remove('active'));
 
-els.viewList.addEventListener('click', () => {
-    state.view = 'list';
-    els.viewList.classList.add('active');
-    els.viewMap.classList.remove('active');
+    if (view === 'map') {
+        els.viewMap.classList.add('active');
+        els.mapContainer.style.display = '';
+        $('list-view').classList.remove('active');
+        setTimeout(() => MapManager.invalidateSize(), 100);
+        return;
+    }
+
     els.mapContainer.style.display = 'none';
     $('list-view').classList.add('active');
-    renderList();
-});
+
+    if (view === 'list') {
+        els.viewList.classList.add('active');
+        renderList();
+    } else {
+        els.viewFav.classList.add('active');
+        renderFavourites();
+    }
+}
+
+els.viewMap.addEventListener('click', () => setView('map'));
+els.viewList.addEventListener('click', () => setView('list'));
+els.viewFav.addEventListener('click', () => setView('fav'));
 
 // ── API fetch
 const CACHE_KEY = 'sgbikes_cache';
@@ -370,6 +382,7 @@ function applyFiltersAndRender() {
     MapManager.plotResults(items, showDetailModal);
 
     if (state.view === 'list') renderList();
+    else if (state.view === 'fav') renderFavourites();
 }
 
 // ── Loading state
@@ -430,6 +443,97 @@ function rackClass(type) {
 
 const PAGE_SIZE = 10;
 
+// Builds one result card. The favourite star sits in the top right corner and
+// toggles on the spot, so a tap saves without opening anything.
+function buildCard(item) {
+    const card = document.createElement('div');
+    card.className = 'parking-card glass';
+
+    const shelterBadge =
+        item.ShelterIndicator === 'Y' ?
+        `<span class="badge badge-shelter">${ICONS.umbrella} Sheltered</span>` :
+        '';
+    // Favourites reached from the favourites view have no distance to show.
+    const distanceRow =
+        typeof item._dist === 'number' ?
+        `<div class="card-distance">${ICONS.ruler} ${fmtDist(item._dist)} away</div>` :
+        '';
+    const saved = Sync.has(item.Description);
+
+    card.innerHTML = `
+      <button class="fav-star ${saved ? 'active' : ''}" type="button"
+              aria-pressed="${saved}"
+              aria-label="${saved ? 'Remove from favourites' : 'Save to favourites'}">
+        ${saved ? ICONS.starFilled : ICONS.star}
+      </button>
+      <div class="card-icon ${rackClass(item.RackType)}">${rackIcon(item.RackType)}</div>
+      <div class="card-body">
+        <div class="card-code-label">Parking Code</div>
+        <div class="card-title">${item.Description}</div>
+        <div class="card-meta">
+          <span class="badge ${rackClass(item.RackType) === 'ybox' ? 'badge-ybox' : 'badge-rack'}">${item.RackType}</span>
+          <span class="badge badge-count">${ICONS.hash} ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}</span>
+          ${shelterBadge}
+        </div>
+        ${distanceRow}
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-secondary card-details-btn" style="font-size:0.78rem;padding:6px 10px">Details →</button>
+      </div>
+    `;
+
+    const star = card.querySelector('.fav-star');
+    star.addEventListener('click', (e) => {
+        // The whole card opens the detail modal, so the star must not bubble.
+        e.stopPropagation();
+        toggleFavourite(item, star);
+    });
+
+    card.querySelector('.card-details-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        showDetailModal(item);
+    });
+    card.addEventListener('click', () => showDetailModal(item));
+
+    return card;
+}
+
+// Single place that flips a star, so the card, the modal and the favourites
+// view all behave the same way.
+function toggleFavourite(item, starEl) {
+    const saved = Sync.toggle(item);
+
+    if (starEl) {
+        starEl.innerHTML = saved ? ICONS.starFilled : ICONS.star;
+        starEl.classList.toggle('active', saved);
+        starEl.setAttribute('aria-pressed', String(saved));
+        starEl.setAttribute('aria-label', saved ? 'Remove from favourites' : 'Save to favourites');
+        if (saved) {
+            starEl.classList.remove('just-saved');
+            // Force a reflow so the animation replays on a repeat save.
+            void starEl.offsetWidth;
+            starEl.classList.add('just-saved');
+        }
+    }
+
+    showToast(saved ? `Saved ${item.Description}` : `Removed ${item.Description}`);
+    return saved;
+}
+
+function renderPager(container, page, totalPages, onChange) {
+    if (totalPages <= 1) return;
+    const pager = document.createElement('div');
+    pager.className = 'pagination';
+    pager.innerHTML = `
+      <button class="btn btn-secondary pagination-prev" ${page === 0 ? 'disabled' : ''}>← Prev</button>
+      <span class="pagination-info">${page + 1} / ${totalPages}</span>
+      <button class="btn btn-secondary pagination-next" ${page >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+    `;
+    pager.querySelector('.pagination-prev').addEventListener('click', () => onChange(page - 1));
+    pager.querySelector('.pagination-next').addEventListener('click', () => onChange(page + 1));
+    container.appendChild(pager);
+}
+
 function renderList() {
     const lv = $('list-view');
     lv.innerHTML = '';
@@ -449,54 +553,56 @@ function renderList() {
     const page = state.listPage;
     const pageItems = state.filteredResults.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-    pageItems.forEach((item) => {
-        const card = document.createElement('div');
-        card.className = 'parking-card glass';
-        const shelterBadge =
-            item.ShelterIndicator === 'Y' ?
-            `<span class="badge badge-shelter">${ICONS.umbrella} Sheltered</span>` :
-            '';
-        card.innerHTML = `
-      <div class="card-icon ${rackClass(item.RackType)}">${rackIcon(item.RackType)}</div>
-      <div class="card-body">
-        <div class="card-code-label">Parking Code</div>
-        <div class="card-title">${item.Description}</div>
-        <div class="card-meta">
-          <span class="badge ${rackClass(item.RackType) === 'ybox' ? 'badge-ybox' : 'badge-rack'}">${item.RackType}</span>
-          <span class="badge badge-count">${ICONS.hash} ${item.RackCount} lot${item.RackCount !== 1 ? 's' : ''}</span>
-          ${shelterBadge}
-        </div>
-        <div class="card-distance">${ICONS.ruler} ${fmtDist(item._dist)} away</div>
-      </div>
-      <div class="card-actions">
-        <button class="btn btn-secondary" style="font-size:0.78rem;padding:6px 10px">Details →</button>
-      </div>
-    `;
-        card.querySelector('button').addEventListener('click', () => showDetailModal(item));
-        card.addEventListener('click', () => showDetailModal(item));
-        lv.appendChild(card);
-    });
+    pageItems.forEach((item) => lv.appendChild(buildCard(item)));
 
-    if (totalPages > 1) {
-        const pager = document.createElement('div');
-        pager.className = 'pagination';
-        pager.innerHTML = `
-      <button class="btn btn-secondary pagination-prev" ${page === 0 ? 'disabled' : ''}>← Prev</button>
-      <span class="pagination-info">${page + 1} / ${totalPages}</span>
-      <button class="btn btn-secondary pagination-next" ${page >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
-    `;
-        pager.querySelector('.pagination-prev').addEventListener('click', () => {
-            state.listPage--;
-            renderList();
-            lv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-        pager.querySelector('.pagination-next').addEventListener('click', () => {
-            state.listPage++;
-            renderList();
-            lv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-        lv.appendChild(pager);
+    renderPager(lv, page, totalPages, (next) => {
+        state.listPage = next;
+        renderList();
+        lv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+// ── Favourites view
+function renderFavourites() {
+    const lv = $('list-view');
+    lv.innerHTML = '';
+
+    const items = Sync.list();
+
+    if (!items.length) {
+        lv.innerHTML = `
+      <div class="state-box glass">
+        <div class="state-icon">${ICONS.star}</div>
+        <div class="state-title">No favourites yet</div>
+        <div class="state-sub">Tap the star on any parking spot to keep it here.</div>
+        <div class="fav-empty-hint">Favourites stay on this device until you link Telegram.</div>
+      </div>`;
+        return;
     }
+
+    // Distance is only meaningful once we know where the person is.
+    if (state.searchLat != null && state.searchLng != null) {
+        items.forEach((item) => {
+            if (item.Latitude != null && item.Longitude != null) {
+                item._dist = haversine(state.searchLat, state.searchLng, item.Latitude, item.Longitude);
+            }
+        });
+        items.sort((a, b) => (a._dist ?? Infinity) - (b._dist ?? Infinity));
+    }
+
+    const totalPages = Math.ceil(items.length / PAGE_SIZE);
+    const page = Math.min(state.favPage, Math.max(0, totalPages - 1));
+    state.favPage = page;
+
+    items
+        .slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+        .forEach((item) => lv.appendChild(buildCard(item)));
+
+    renderPager(lv, page, totalPages, (next) => {
+        state.favPage = next;
+        renderFavourites();
+        lv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 }
 
 // ── Detail modal
@@ -522,7 +628,12 @@ function showDetailModal(item) {
     $('detail-distance').textContent = state.searchLat ?
         fmtDist(item._dist) :
         '-';
-    $('detail-coords').textContent = `${item.Latitude.toFixed(6)}, ${item.Longitude.toFixed(6)}`;
+    $('detail-coords').textContent =
+        item.Latitude != null && item.Longitude != null ?
+        `${item.Latitude.toFixed(6)}, ${item.Longitude.toFixed(6)}` :
+        '';
+
+    syncDetailFavButton();
 
     // pan to marker
     if (state.view === 'map') {
@@ -531,6 +642,24 @@ function showDetailModal(item) {
 
     openModal('detail-modal');
 }
+
+// Keeps the detail modal button in step with the stored favourites.
+function syncDetailFavButton() {
+    const btn = $('detail-fav-btn');
+    if (!btn || !state.currentDetail) return;
+
+    const saved = Sync.has(state.currentDetail.Description);
+    btn.classList.toggle('active', saved);
+    btn.setAttribute('aria-pressed', String(saved));
+    btn.querySelector('[data-fav-icon]').innerHTML = saved ? ICONS.starFilled : ICONS.star;
+    $('detail-fav-label').textContent = saved ? 'Saved to favourites' : 'Save to favourites';
+}
+
+$('detail-fav-btn').addEventListener('click', () => {
+    if (!state.currentDetail) return;
+    toggleFavourite(state.currentDetail, null);
+    syncDetailFavButton();
+});
 
 // Navigate buttons
 document.getElementById('nav-googlemaps').addEventListener('click', () => {
@@ -598,6 +727,240 @@ document.getElementById('map-modal-nav-waze').addEventListener('click', () => {
     window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`, '_blank');
 });
 
+// ── Favourites and Telegram sync UI
+let backupPollTimer = null;
+
+function setSyncStatus(kind, text) {
+    $('sync-status-dot').className = `sync-status-dot ${kind}`;
+    $('sync-status-text').textContent = text;
+}
+
+function updateSyncBadge() {
+    const badge = $('sync-badge');
+    const n = Sync.count();
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.classList.toggle('hidden', n === 0);
+}
+
+function renderSyncActions(linked) {
+    const box = $('sync-actions');
+    box.innerHTML = linked ?
+        `<button class="btn btn-secondary" id="sync-unlink">${ICONS.unlink} Unlink Telegram</button>` :
+        `<button class="btn btn-primary" id="sync-link">${ICONS.telegram} Link Telegram</button>`;
+
+    $('backup-section').hidden = !linked;
+    $('redeem-section').hidden = linked;
+
+    if (linked) {
+        $('sync-unlink').addEventListener('click', doUnlink);
+    } else {
+        $('sync-link').addEventListener('click', doLink);
+    }
+}
+
+function renderSyncStats(info) {
+    const cells = [
+        ['Favourites', info.favourites ?? Sync.count()],
+    ];
+    if (info.linked) {
+        cells.push(['Devices', info.devices ?? 1]);
+        cells.push(['Backup codes', info.backup_codes_remaining ?? 0]);
+    }
+    $('sync-stats').innerHTML = cells
+        .map(
+            ([label, value]) => `
+      <div class="sync-stat">
+        <span class="sync-stat-value">${value}</span>
+        <span class="sync-stat-label">${label}</span>
+      </div>`
+        )
+        .join('');
+}
+
+async function refreshSyncModal() {
+    setSyncStatus('waiting', 'Checking…');
+    try {
+        const info = await Sync.status();
+        if (info.linked) {
+            const who = info.username ? `@${info.username}` : info.first_name || 'your Telegram account';
+            setSyncStatus('linked', `Linked to ${who}`);
+        } else {
+            setSyncStatus('', 'Saved on this device only');
+        }
+        renderSyncStats(info);
+        renderSyncActions(Boolean(info.linked));
+    } catch (err) {
+        setSyncStatus('error', 'Sync is unavailable right now');
+        renderSyncStats({ linked: false, favourites: Sync.count() });
+        renderSyncActions(false);
+    }
+    hydrateIcons($('syncModal'));
+}
+
+async function doLink() {
+    const btn = $('sync-link');
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+
+    try {
+        const { url } = await Sync.startLink();
+        window.open(url, '_blank', 'noopener');
+        setSyncStatus('waiting', 'Waiting for you to tap Start in Telegram…');
+
+        const linked = await Sync.waitForLink();
+        if (linked) {
+            showToast('Telegram linked. Favourites merged.');
+            await refreshSyncModal();
+        } else {
+            setSyncStatus('', 'Still not linked. Try again when you are ready.');
+            renderSyncActions(false);
+            hydrateIcons($('syncModal'));
+        }
+    } catch (err) {
+        showToast('Could not start linking. Try again shortly.');
+        await refreshSyncModal();
+    }
+}
+
+async function doUnlink() {
+    const btn = $('sync-unlink');
+    btn.disabled = true;
+    btn.textContent = 'Unlinking…';
+    try {
+        await Sync.unlink();
+        showToast('Telegram unlinked. Your favourites stay on this device.');
+    } catch (err) {
+        showToast('Could not unlink. Try again shortly.');
+    }
+    await refreshSyncModal();
+}
+
+// Backup codes are only released after someone approves the request in chat,
+// so this raises the request and then waits on the bot.
+async function doGenerateBackupCodes() {
+    const btn = $('backup-generate');
+    const out = $('backup-codes');
+    btn.disabled = true;
+    btn.textContent = 'Waiting for approval…';
+    out.classList.add('hidden');
+
+    try {
+        const { request_id: requestId } = await Sync.requestBackupCodes();
+        showToast('Approve the request in Telegram to continue.');
+
+        clearInterval(backupPollTimer);
+        const started = Date.now();
+
+        backupPollTimer = setInterval(async () => {
+            // The request itself expires after ten minutes on the server.
+            if (Date.now() - started > 10 * 60 * 1000) {
+                clearInterval(backupPollTimer);
+                btn.disabled = false;
+                btn.textContent = 'Generate codes';
+                setSyncStatus('error', 'The approval request timed out.');
+                return;
+            }
+
+            try {
+                const res = await Sync.pollBackupCodes(requestId);
+                if (res.status === 'approved' && res.codes) {
+                    clearInterval(backupPollTimer);
+                    showBackupCodes(res.codes);
+                    btn.disabled = false;
+                    btn.textContent = 'Generate new codes';
+                    await refreshSyncModal();
+                } else if (['declined', 'expired'].includes(res.status)) {
+                    clearInterval(backupPollTimer);
+                    btn.disabled = false;
+                    btn.textContent = 'Generate codes';
+                    showToast(
+                        res.status === 'declined' ?
+                        'The request was declined in Telegram.' :
+                        'The request expired. Start it again.'
+                    );
+                }
+            } catch (_) {}
+        }, 2500);
+    } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Generate codes';
+        showToast(err.message || 'Could not request backup codes.');
+    }
+}
+
+function showBackupCodes(codes) {
+    const out = $('backup-codes');
+    out.classList.remove('hidden');
+    out.innerHTML = `
+      <div class="backup-warning">
+        ${ICONS.warning}
+        <span>These are shown once and cannot be retrieved again. Save them somewhere safe and offline. Each code works a single time.</span>
+      </div>
+      <div class="backup-code-grid">
+        ${codes.map((c) => `<div class="backup-code">${c}</div>`).join('')}
+      </div>
+      <button class="btn btn-secondary" id="backup-copy" style="width:100%;justify-content:center">${ICONS.copy} Copy all codes</button>
+    `;
+    $('backup-copy').addEventListener('click', () => {
+        navigator.clipboard
+            .writeText(codes.join('\n'))
+            .then(() => showToast('Backup codes copied.'))
+            .catch(() => showToast('Copy failed. Write them down instead.'));
+    });
+}
+
+async function doRedeem() {
+    const input = $('redeem-input');
+    const code = input.value.trim();
+    if (!code) return;
+
+    const btn = $('redeem-btn');
+    btn.disabled = true;
+    btn.textContent = 'Restoring…';
+
+    try {
+        const res = await Sync.redeemBackupCode(code);
+        if (res.ok) {
+            input.value = '';
+            showToast(`Restored. You now have ${res.total} favourites.`);
+            await refreshSyncModal();
+        }
+    } catch (err) {
+        showToast((err.body && err.body.message) || 'That backup code is not valid.');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Restore';
+}
+
+function wireSync() {
+    Sync.onChange(() => {
+        updateSyncBadge();
+        if (state.view === 'fav') renderFavourites();
+    });
+
+    $('syncBtn').addEventListener('click', () => {
+        openModal('syncModal');
+        refreshSyncModal();
+    });
+
+    $('backup-generate').addEventListener('click', doGenerateBackupCodes);
+    $('redeem-btn').addEventListener('click', doRedeem);
+    $('redeem-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doRedeem();
+    });
+
+    // Stop polling for an approval once the modal is out of the way.
+    $('syncModal').addEventListener('click', (e) => {
+        if (e.target === $('syncModal') || e.target.closest('[data-close-modal="syncModal"]')) {
+            clearInterval(backupPollTimer);
+        }
+    });
+
+    Sync.init();
+    updateSyncBadge();
+}
+
 // ── PWA install
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -607,7 +970,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 // ── Service worker
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/js/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 
 // ── Init
@@ -621,6 +984,7 @@ if ('serviceWorker' in navigator) {
     updateThemeButtonIcon();
     buildThemeModal();
     wireModals();
+    wireSync();
 
     getLocation();
 

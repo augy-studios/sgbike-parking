@@ -78,6 +78,10 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="icon-btn" id="syncBtn" type="button" title="Favourites and sync" aria-label="Favourites and sync">
+                <span data-icon="link"></span>
+                <span class="sync-badge hidden" id="sync-badge">0</span>
+            </button>
             <a href="https://donate.stripe.com/28o2akeAr3hv0DK6oo" target="_blank" rel="noopener noreferrer" class="btn btn-icon" id="coffee-btn" title="Buy Augy a Coffee" aria-label="Buy Augy a Coffee"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg></a>
             <button class="icon-btn" id="themeBtn" type="button" aria-label="Theme">
                 <span data-icon="sun"></span>
@@ -127,6 +131,7 @@
             <div class="view-toggle">
                 <button class="view-btn active" id="view-map" title="Map view"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg></button>
                 <button class="view-btn" id="view-list" title="List view"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg></button>
+                <button class="view-btn" id="view-fav" title="Favourites"><span data-icon="star"></span></button>
             </div>
         </div>
 
@@ -176,6 +181,9 @@
                         </button>
                     </div>
                     <div class="detail-badges" id="detail-badges"></div>
+                    <button class="detail-fav" id="detail-fav-btn" type="button" style="margin-top:10px">
+                        <span data-fav-icon></span><span id="detail-fav-label">Save to favourites</span>
+                    </button>
                 </div>
             </div>
 
@@ -247,6 +255,59 @@
     <!-- ── Toast -->
     <div id="toast" role="status" aria-live="polite"></div>
 
+    <!-- ── Sync Modal -->
+    <div class="modal-backdrop hidden" id="syncModal">
+        <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="syncModalTitle">
+            <div class="modal-head">
+                <h2 id="syncModalTitle">Favourites</h2>
+                <button class="icon-btn small" type="button" data-close-modal="syncModal" aria-label="Close">
+                    <span data-icon="close"></span>
+                </button>
+            </div>
+
+            <p class="sync-intro">
+                Star any parking spot to keep it. Favourites are saved on this device.
+                Link Telegram to carry them across your other devices and to reach them
+                from chat.
+            </p>
+
+            <!-- Live status, filled in by script.js -->
+            <div class="sync-status" id="sync-status">
+                <span class="sync-status-dot" id="sync-status-dot"></span>
+                <span id="sync-status-text">Checking…</span>
+            </div>
+
+            <div class="sync-stats" id="sync-stats"></div>
+
+            <div class="sync-actions" id="sync-actions"></div>
+
+            <!-- Backup codes -->
+            <div class="sync-section" id="backup-section" hidden>
+                <p class="modal-section-label"><span data-icon="shield"></span> Backup codes</p>
+                <p class="sync-note">
+                    Ten single use codes that restore your favourites onto a new browser
+                    if you ever lose access to Telegram. Creating them needs approval in
+                    chat first. Generating a new set cancels the old one.
+                </p>
+                <div class="sync-actions">
+                    <button class="btn btn-secondary" id="backup-generate">Generate codes</button>
+                </div>
+                <div class="backup-codes hidden" id="backup-codes"></div>
+            </div>
+
+            <!-- Recovery -->
+            <div class="sync-section" id="redeem-section">
+                <p class="modal-section-label">Lost access to Telegram?</p>
+                <p class="sync-note">Enter a backup code to restore your favourites onto this browser.</p>
+                <div class="search-row">
+                    <input type="text" class="search-input" id="redeem-input" placeholder="XXXX-XXXX-XXXX"
+                        autocomplete="off" spellcheck="false" maxlength="14" />
+                    <button class="btn btn-secondary" id="redeem-btn">Restore</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Theme Modal -->
     <div class="modal-backdrop hidden" id="themeModal">
         <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle">
@@ -271,6 +332,7 @@
     <script src="/js/icons.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/theme.js"></script>
+    <script src="/js/sync.js"></script>
     <script src="/map.js"></script>
     <script src="/script.js"></script>
 

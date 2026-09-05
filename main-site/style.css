@@ -709,6 +709,8 @@ main {
   display: flex;
   gap: 14px;
   align-items: flex-start;
+  /* Anchor for the favourite star in the top right corner. */
+  position: relative;
 }
 
 .parking-card:hover {
@@ -1318,5 +1320,300 @@ svg[aria-hidden="true"] {
   /* Pagination */
   .pagination {
     gap: 8px;
+  }
+}
+
+/* ==========================================================================
+   Favourites and Telegram sync
+   ========================================================================== */
+
+/* ---- the star on a card ---- */
+.fav-star {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+  z-index: 2;
+}
+
+.fav-star svg {
+  width: 19px;
+  height: 19px;
+}
+
+.fav-star:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+  transform: scale(1.08);
+}
+
+/* Saved. The gold reads on both the pastel light themes and on dark. */
+.fav-star.active {
+  color: #f5b301;
+}
+
+.fav-star.active:hover {
+  color: #e0a300;
+}
+
+/* A small pop on the transition from outline to filled. */
+@keyframes fav-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.fav-star.just-saved svg {
+  animation: fav-pop 0.32s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fav-star,
+  .fav-star.just-saved svg {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Keep the star clear of the card text. */
+.parking-card .card-body {
+  padding-right: 30px;
+}
+
+/* ---- the star inside the detail modal ---- */
+.detail-fav {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-strong);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.detail-fav svg {
+  width: 16px;
+  height: 16px;
+}
+
+.detail-fav.active {
+  color: #f5b301;
+  border-color: #f5b301;
+}
+
+/* ---- header button badge ---- */
+#syncBtn {
+  position: relative;
+}
+
+.sync-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #f5b301;
+  color: #3a2a00;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.sync-badge.hidden {
+  display: none;
+}
+
+/* ---- sync modal ---- */
+.sync-intro,
+.sync-note {
+  font-size: 0.82rem;
+  color: var(--muted-strong);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.sync-note {
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sync-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.sync-status-dot.linked { background: var(--ok); }
+.sync-status-dot.waiting { background: var(--busy); }
+.sync-status-dot.error { background: var(--error); }
+
+.sync-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.sync-stat {
+  flex: 1;
+  min-width: 84px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
+  text-align: center;
+}
+
+.sync-stat-value {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--brand-ink);
+}
+
+.sync-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.sync-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.sync-actions .btn {
+  flex: 1;
+  justify-content: center;
+  min-width: 130px;
+}
+
+.sync-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--surface-border);
+}
+
+.sync-section .modal-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sync-section .modal-section-label svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---- generated backup codes ---- */
+.backup-codes {
+  margin-top: 12px;
+}
+
+.backup-codes.hidden {
+  display: none;
+}
+
+.backup-code-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.backup-code {
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--ink);
+}
+
+.backup-code.used {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.backup-warning {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.backup-warning svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ---- favourites view empty state ---- */
+.fav-empty-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  /* A fourteen character code will not sit in half a phone width. */
+  .backup-code-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sync-actions .btn {
+    min-width: 100%;
   }
 }
