@@ -43,6 +43,37 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger("bot")
 
 
+class TransientTelegramNoise(logging.Filter):
+    """Demote Telethon's warnings about Telegram's own outages to DEBUG.
+
+    When Telegram's servers hiccup, Telethon logs a WARNING for every retry of
+    its background update fetch (RpcCallFailError on GetDifferenceRequest, and
+    friends), then recovers on its own. The bot keeps running the whole time,
+    so at WARNING these lines only make a healthy process look broken. Anything
+    else Telethon has to say at WARNING still comes through untouched.
+    """
+
+    PHRASES = (
+        "Telegram is having internal issues",
+        "Cannot get difference",
+        "Failed to get missed updates",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno == logging.WARNING and any(
+            phrase in record.getMessage() for phrase in self.PHRASES
+        ):
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+            # Still visible when running with LOG_LEVEL=DEBUG, hidden otherwise.
+            return logging.getLogger().isEnabledFor(logging.DEBUG)
+        return True
+
+
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(TransientTelegramNoise())
+
+
 # A command may arrive as /fav in a private chat or as /fav@thebot in a group,
 # so every pattern tolerates the suffix without naming the bot itself.
 def command(name: str, argument: bool = False) -> str:
