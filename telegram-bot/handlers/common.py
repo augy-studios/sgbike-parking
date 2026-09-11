@@ -10,12 +10,17 @@ from __future__ import annotations
 
 import lta
 import supabase_client as sb
-from richtext import ActionButton, UrlButton, esc, maps_url
+from richtext import ActionButton, UrlButton, citymapper_url, esc, maps_url, waze_url
 
 STAR_SAVED = "★"
 STAR_EMPTY = "☆"
 
 PAGE_SIZE_MAX = 8
+
+# The context key that names the spot whose Navigate button has been opened
+# into its row of map apps. It rides along in the context so a star toggle on
+# the same message keeps the row open, and it is dropped when paging away.
+NAV_OPEN = "nav_open"
 
 
 def star_label(code: str, saved: bool) -> str:
@@ -50,8 +55,14 @@ async def spot_buttons(
     *,
     context: dict,
 ) -> list[list]:
-    """One row per spot: a favourite toggle and a navigation link."""
+    """One row per spot: a favourite toggle and a Navigate button.
+
+    Tapping Navigate does not open a map straight away. It swaps itself for a
+    row of three links, one per map app, so the person picks the one they
+    actually have installed. Only one spot's row is open at a time.
+    """
     saved_codes = {f["code"] for f in await sb.list_favourites(telegram_id)}
+    nav_open = context.get(NAV_OPEN)
 
     rows: list[list] = []
     for spot in spots:
@@ -63,15 +74,31 @@ async def spot_buttons(
                 {"spot": spot, "context": context},
             )
         ]
-        if spot.get("latitude") is not None and spot.get("longitude") is not None:
-            row.append(UrlButton("Navigate", maps_url(spot)))
+        has_coords = spot.get("latitude") is not None and spot.get("longitude") is not None
+
+        if has_coords and spot["code"] != nav_open:
+            row.append(
+                ActionButton("Navigate", "nav.open", {"code": spot["code"], "context": context})
+            )
         rows.append(row)
+
+        if has_coords and spot["code"] == nav_open:
+            # Three labels side by side already fill a phone screen, so the
+            # links sit on their own row directly under the star.
+            rows.append(
+                [
+                    UrlButton("Google Maps", maps_url(spot)),
+                    UrlButton("Citymapper", citymapper_url(spot)),
+                    UrlButton("Waze", waze_url(spot)),
+                ]
+            )
 
     return rows
 
 
 def pager_row(context: dict, page: int, total_pages: int, kind: str) -> list:
     """Previous and next buttons, only where they lead somewhere."""
+    context = {key: value for key, value in context.items() if key != NAV_OPEN}
     row = []
     if page > 0:
         row.append(ActionButton("‹ Back", kind, {**context, "page": page - 1}))

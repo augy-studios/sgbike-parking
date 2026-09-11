@@ -15,7 +15,14 @@ import lta
 import supabase_client as sb
 from config import RADIUS_CHOICES, WEB_APP_URL
 from handlers import callbacks
-from handlers.common import pager_row, paginate, render_spot_list, spot_buttons, user_from_event
+from handlers.common import (
+    NAV_OPEN,
+    pager_row,
+    paginate,
+    render_spot_list,
+    spot_buttons,
+    user_from_event,
+)
 from richtext import ActionButton, UrlButton, edit_rich_message, esc, send_rich_message, truncate
 
 log = logging.getLogger(__name__)
@@ -96,9 +103,11 @@ async def build_search_view(telegram_id: int, context: dict, settings: dict):
     if nav:
         buttons.append(nav)
 
-    # Offer the radii that are not already in use.
+    # Offer the radii that are not already in use. A new radius is a new list,
+    # so an open Navigate row does not carry over.
+    fresh = {key: value for key, value in context.items() if key != NAV_OPEN}
     radius_row = [
-        ActionButton(f"{choice:g}km", "search.radius", {**context, "radius": choice, "page": 0})
+        ActionButton(f"{choice:g}km", "search.radius", {**fresh, "radius": choice, "page": 0})
         for choice in RADIUS_CHOICES
         if choice != radius
     ]

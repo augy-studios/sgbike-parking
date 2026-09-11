@@ -23,6 +23,7 @@ import html
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
+from urllib.parse import quote
 
 from telethon import Button
 
@@ -188,9 +189,24 @@ async def edit_rich_message(
 # Shared renderers
 # ---------------------------------------------------------------------------
 
+# Telegram only accepts http and https on a URL button, so each of these is the
+# app's universal link rather than its custom scheme. On a phone with the app
+# installed the link opens the app; otherwise it falls back to the website.
+
 def maps_url(spot: dict) -> str:
     lat, lng = spot.get("latitude"), spot.get("longitude")
     return f"https://maps.google.com/?daddr={lat},{lng}&travelmode=bicycling"
+
+
+def citymapper_url(spot: dict) -> str:
+    lat, lng = spot.get("latitude"), spot.get("longitude")
+    name = quote(str(spot.get("code") or "Bicycle parking"))
+    return f"https://citymapper.com/directions?endcoord={lat}%2C{lng}&endname={name}"
+
+
+def waze_url(spot: dict) -> str:
+    lat, lng = spot.get("latitude"), spot.get("longitude")
+    return f"https://waze.com/ul?ll={lat}%2C{lng}&navigate=yes"
 
 
 def truncate(text: str, limit: int = 3800) -> str:
