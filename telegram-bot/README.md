@@ -239,7 +239,8 @@ telegram-bot/
 ├── supabase_client.py      PostgREST client for the shared store
 ├── lta.py                  DataMall lookups, cached, plus distance helpers
 ├── geocoding.py            OneMap first, Nominatim as a fallback
-├── richtext.py             send_rich_message and the persistent button layer
+├── reply.py                Raw MTProto sends and edits carrying a Rich Message
+├── richtext.py             Message composition and the persistent button layer
 ├── handlers/
 │   ├── callbacks.py        Token to handler routing for every button
 │   ├── common.py           Shared list rendering and paging

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import lta
 import supabase_client as sb
-from richtext import ActionButton, UrlButton, citymapper_url, esc, maps_url, waze_url
+from richtext import ActionButton, Table, UrlButton, citymapper_url, maps_url, waze_url
 
 STAR_SAVED = "★"
 STAR_EMPTY = "☆"
@@ -30,23 +30,32 @@ def star_label(code: str, saved: bool) -> str:
     return f"{mark} {label}"
 
 
-def render_spot_list(spots: list[dict], *, start_index: int = 1) -> str:
-    """The numbered body of a results message."""
-    blocks = []
-    for offset, spot in enumerate(spots):
-        facts = [
-            spot.get("rack_type") or "Racks",
-            f"{spot.get('rack_count') or 0} lots",
-            "sheltered" if spot.get("sheltered") else "not sheltered",
-        ]
-        if spot.get("distance_km") is not None:
-            facts.append(f"{lta.format_distance(spot['distance_km'])} away")
+def render_spot_list(spots: list[dict]) -> Table:
+    """One page of results as a table, one row per spot, labelled by its code.
 
-        blocks.append(
-            f"<b>{start_index + offset}. {esc(spot['code'])}</b>\n"
-            f"<i>{esc(' · '.join(facts))}</i>"
-        )
-    return "\n\n".join(blocks)
+    The labels match the star buttons underneath, which carry the same code,
+    so nothing needs numbering. Distance only appears when it is known, which
+    is a search; favourites have no origin to measure from.
+    """
+    with_distance = any(spot.get("distance_km") is not None for spot in spots)
+
+    headers = ["Type", "Lots", "Sheltered"]
+    if with_distance:
+        headers.append("Away")
+
+    rows = []
+    for spot in spots:
+        row = [
+            spot["code"],
+            spot.get("rack_type") or "Racks",
+            spot.get("rack_count") or 0,
+            "Yes" if spot.get("sheltered") else "No",
+        ]
+        if with_distance:
+            row.append(lta.format_distance(spot.get("distance_km")))
+        rows.append(row)
+
+    return Table(headers, rows)
 
 
 async def spot_buttons(

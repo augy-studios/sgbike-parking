@@ -23,7 +23,15 @@ from handlers.common import (
     spot_buttons,
     user_from_event,
 )
-from richtext import ActionButton, UrlButton, edit_rich_message, esc, send_rich_message, truncate
+from richtext import (
+    ActionButton,
+    Para,
+    UrlButton,
+    compose,
+    edit_rich_message,
+    escape_md,
+    send_rich_message,
+)
 
 log = logging.getLogger(__name__)
 
@@ -42,20 +50,20 @@ async def within_rate_limit(event, telegram_id: int) -> bool:
         await send_rich_message(
             event.client,
             event.chat_id,
-            title="Slow down a moment",
-            body=(
+            compose(
+                "Slow down a moment",
                 "That is a lot of searches in one minute. Give it about "
-                f"{verdict['retry_after']} seconds and carry on.\n\n"
+                f"{verdict['retry_after']} seconds and carry on.",
                 "The address lookup is shared with everyone else using this, "
-                "which is why there is a limit at all."
+                "which is why there is a limit at all.",
             ),
             user_id=telegram_id,
         )
     return False
 
 
-async def build_search_view(telegram_id: int, context: dict, settings: dict):
-    """Assemble the title, body and buttons for one page of results.
+async def build_search_view(telegram_id: int, context: dict, settings: dict) -> tuple[dict, list]:
+    """Assemble the message and buttons for one page of results.
 
     The results themselves come back through the SQLite cache in almost every
     case, so paging does not mean another call to DataMall.
@@ -72,9 +80,10 @@ async def build_search_view(telegram_id: int, context: dict, settings: dict):
 
     if not spots:
         filters_note = " that are sheltered" if sheltered_only else ""
-        body = (
-            f"Nothing{filters_note} within {radius:g}km of {esc(label)}.\n\n"
-            "Try a wider radius below, or send a different address."
+        rich = compose(
+            "No parking found",
+            f"Nothing{filters_note} within {radius:g}km of {label}.",
+            "Try a wider radius below, or send a different address.",
         )
         buttons = [
             [
@@ -88,14 +97,17 @@ async def build_search_view(telegram_id: int, context: dict, settings: dict):
             ],
             [UrlButton("Open the web app", WEB_APP_URL)],
         ]
-        return "No parking found", body, buttons
+        return rich, buttons
 
     page_size = int(settings.get("result_limit") or 5)
     items, page, total_pages = paginate(spots, page, page_size)
     context = {**context, "page": page, "radius": radius, "sheltered_only": sheltered_only}
 
-    title = f"{len(spots)} spot{'' if len(spots) == 1 else 's'} near {label}"
-    body = render_spot_list(items, start_index=page * page_size + 1)
+    rich = compose(
+        f"{len(spots)} spot{'' if len(spots) == 1 else 's'} near {label}",
+        render_spot_list(items),
+        footer=f"Searching within {radius:g}km. Tap a star to save a spot.",
+    )
 
     buttons = await spot_buttons(items, telegram_id, context={**context, "kind": "search"})
 
@@ -114,20 +126,12 @@ async def build_search_view(telegram_id: int, context: dict, settings: dict):
     if radius_row:
         buttons.append(radius_row)
 
-    return title, truncate(body), buttons
+    return rich, buttons
 
 
 async def respond_with_results(event, telegram_id: int, context: dict, settings: dict) -> None:
-    title, body, buttons = await build_search_view(telegram_id, context, settings)
-    await send_rich_message(
-        event.client,
-        event.chat_id,
-        title=title,
-        body=body,
-        footer=f"Searching within {context.get('radius', settings.get('radius', 0.5)):g}km. Tap a star to save a spot.",
-        buttons=buttons,
-        user_id=telegram_id,
-    )
+    rich, buttons = await build_search_view(telegram_id, context, settings)
+    await send_rich_message(event.client, event.chat_id, rich, buttons, user_id=telegram_id)
 
 
 async def on_text(event) -> None:
@@ -149,12 +153,15 @@ async def on_text(event) -> None:
             await send_rich_message(
                 client,
                 event.chat_id,
-                title="Could not find that",
-                body=(
-                    f"Nothing in Singapore matched <b>{esc(query)}</b>.\n\n"
+                compose(
+                    "Could not find that",
+                    Para(
+                        f"Nothing in Singapore matched {query}.",
+                        md=f"Nothing in Singapore matched **{escape_md(query)}**.",
+                    ),
                     "Try a postal code, a block and street, or an MRT station "
                     "name. You can also share your location and skip the "
-                    "typing altogether."
+                    "typing altogether.",
                 ),
                 user_id=telegram_id,
             )
@@ -178,12 +185,12 @@ async def on_text(event) -> None:
             await send_rich_message(
                 client,
                 event.chat_id,
-                title="Could not reach the parking data",
-                body=(
+                compose(
+                    "Could not reach the parking data",
                     "LTA DataMall did not answer just now. Please try again in "
-                    "a moment. The web app may still have cached results."
+                    "a moment. The web app may still have cached results.",
                 ),
-                buttons=[[UrlButton("Open the web app", WEB_APP_URL)]],
+                [[UrlButton("Open the web app", WEB_APP_URL)]],
                 user_id=telegram_id,
             )
 
@@ -219,8 +226,10 @@ async def on_location(event) -> None:
             await send_rich_message(
                 client,
                 event.chat_id,
-                title="Could not reach the parking data",
-                body="LTA DataMall did not answer just now. Please try again shortly.",
+                compose(
+                    "Could not reach the parking data",
+                    "LTA DataMall did not answer just now. Please try again shortly.",
+                ),
                 user_id=telegram_id,
             )
 
@@ -228,16 +237,8 @@ async def on_location(event) -> None:
 async def _rerender(event, payload) -> None:
     telegram_id = event.sender_id
     settings = await sb.get_settings(telegram_id)
-    title, body, buttons = await build_search_view(telegram_id, payload, settings)
-
-    await edit_rich_message(
-        event,
-        title=title,
-        body=body,
-        footer=f"Searching within {payload.get('radius', 0.5):g}km. Tap a star to save a spot.",
-        buttons=buttons,
-        user_id=telegram_id,
-    )
+    rich, buttons = await build_search_view(telegram_id, payload, settings)
+    await edit_rich_message(event.client, event, rich, buttons, user_id=telegram_id)
 
 
 @callbacks.on("search.page")

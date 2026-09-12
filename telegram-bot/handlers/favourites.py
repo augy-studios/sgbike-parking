@@ -20,16 +20,17 @@ from handlers.common import (
     spot_buttons,
     user_from_event,
 )
-from richtext import UrlButton, edit_rich_message, send_rich_message, truncate
+from richtext import UrlButton, compose, edit_rich_message, send_rich_message
 
 log = logging.getLogger(__name__)
 
 EMPTY_BODY = (
-    "You have not saved anything yet.\n\n"
     "Send an address or share your location, then tap the star next to any "
     "result. Saved spots turn up here and in the web app once the two are "
     "linked."
 )
+
+FOOTER = "Tap a star to remove a spot."
 
 
 def _to_spot(row: dict) -> dict:
@@ -46,23 +47,28 @@ def _to_spot(row: dict) -> dict:
 
 
 async def build_fav_view(
-    telegram_id: int, page: int, settings: dict, *, nav_open: str | None = None
-):
+    telegram_id: int,
+    page: int,
+    settings: dict,
+    *,
+    nav_open: str | None = None,
+    footer: str = FOOTER,
+) -> tuple[dict, list]:
     rows = await sb.list_favourites(telegram_id)
 
     if not rows:
-        return (
-            "No favourites yet",
-            EMPTY_BODY,
-            [[UrlButton("Open the web app", WEB_APP_URL)]],
-        )
+        rich = compose("No favourites yet", "You have not saved anything yet.", EMPTY_BODY)
+        return rich, [[UrlButton("Open the web app", WEB_APP_URL)]]
 
     spots = [_to_spot(row) for row in rows]
     page_size = int(settings.get("result_limit") or 5)
     items, page, total_pages = paginate(spots, page, page_size)
 
-    title = f"{len(spots)} saved spot{'' if len(spots) == 1 else 's'}"
-    body = render_spot_list(items, start_index=page * page_size + 1)
+    rich = compose(
+        f"{len(spots)} saved spot{'' if len(spots) == 1 else 's'}",
+        render_spot_list(items),
+        footer=footer,
+    )
 
     context = {"kind": "fav", "page": page}
     if nav_open:
@@ -75,32 +81,22 @@ async def build_fav_view(
 
     buttons.append([UrlButton("Open the web app", WEB_APP_URL)])
 
-    return title, truncate(body), buttons
+    return rich, buttons
 
 
 async def cmd_fav(event) -> None:
     client = event.client
     telegram_id, settings = await user_from_event(event)
 
-    title, body, buttons = await build_fav_view(telegram_id, 0, settings)
     devices = await sb.count_linked_devices(telegram_id)
-
     footer = (
-        "Tap a star to remove a spot. Syncing with "
-        f"{devices} browser{'' if devices == 1 else 's'}."
+        f"{FOOTER} Syncing with {devices} browser{'' if devices == 1 else 's'}."
         if devices
-        else "Tap a star to remove a spot. Use /link to sync these with the web app."
+        else f"{FOOTER} Use /link to sync these with the web app."
     )
 
-    await send_rich_message(
-        client,
-        event.chat_id,
-        title=title,
-        body=body,
-        footer=footer,
-        buttons=buttons,
-        user_id=telegram_id,
-    )
+    rich, buttons = await build_fav_view(telegram_id, 0, settings, footer=footer)
+    await send_rich_message(client, event.chat_id, rich, buttons, user_id=telegram_id)
 
 
 @callbacks.on("fav.list")
@@ -109,16 +105,8 @@ async def cb_fav_list(event, payload, action) -> None:
     settings = await sb.get_settings(telegram_id)
     page = int(payload.get("page") or 0)
 
-    title, body, buttons = await build_fav_view(telegram_id, page, settings)
-
-    await edit_rich_message(
-        event,
-        title=title,
-        body=body,
-        footer="Tap a star to remove a spot.",
-        buttons=buttons,
-        user_id=telegram_id,
-    )
+    rich, buttons = await build_fav_view(telegram_id, page, settings)
+    await edit_rich_message(event.client, event, rich, buttons, user_id=telegram_id)
     await event.answer()
 
 
@@ -181,17 +169,13 @@ async def repaint(event, telegram_id: int, context: dict) -> None:
         # modules from importing each other in a cycle.
         from handlers.search import build_search_view
 
-        title, body, buttons = await build_search_view(telegram_id, context, settings)
-        footer = f"Searching within {context.get('radius', 0.5):g}km. Tap a star to save a spot."
+        rich, buttons = await build_search_view(telegram_id, context, settings)
     else:
-        title, body, buttons = await build_fav_view(
+        rich, buttons = await build_fav_view(
             telegram_id,
             int(context.get("page") or 0),
             settings,
             nav_open=context.get(NAV_OPEN),
         )
-        footer = "Tap a star to remove a spot."
 
-    await edit_rich_message(
-        event, title=title, body=body, footer=footer, buttons=buttons, user_id=telegram_id
-    )
+    await edit_rich_message(event.client, event, rich, buttons, user_id=telegram_id)

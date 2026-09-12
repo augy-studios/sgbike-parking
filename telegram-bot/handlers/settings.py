@@ -11,29 +11,33 @@ import supabase_client as sb
 from config import RADIUS_CHOICES
 from handlers import callbacks
 from handlers.common import user_from_event
-from richtext import ActionButton, edit_rich_message, send_rich_message
+from richtext import ActionButton, Table, compose, edit_rich_message, send_rich_message
 
 RESULT_CHOICES = (3, 5, 8)
 
 
-def describe(settings: dict) -> str:
+def build_settings_view(settings: dict) -> tuple[dict, list]:
     radius = float(settings.get("radius") or 0.5)
     limit = int(settings.get("result_limit") or 5)
     sheltered = bool(settings.get("sheltered_only"))
 
-    return (
-        f"<b>Search radius</b>\n{radius:g}km around wherever you are looking\n\n"
-        f"<b>Sheltered only</b>\n{'On, unsheltered racks are hidden' if sheltered else 'Off, everything is shown'}\n\n"
-        f"<b>Results per page</b>\n{limit}"
+    rich = compose(
+        "Search settings",
+        Table(
+            ["Value"],
+            [
+                ["Search radius", f"{radius:g}km around wherever you are looking"],
+                [
+                    "Sheltered only",
+                    "On, unsheltered racks are hidden" if sheltered else "Off, everything is shown",
+                ],
+                ["Results per page", limit],
+            ],
+        ),
+        footer="These apply to searches here. The web app keeps its own controls.",
     )
 
-
-def build_buttons(settings: dict):
-    radius = float(settings.get("radius") or 0.5)
-    limit = int(settings.get("result_limit") or 5)
-    sheltered = bool(settings.get("sheltered_only"))
-
-    return [
+    buttons = [
         [
             ActionButton(
                 f"{'●' if choice == radius else '○'} {choice:g}km",
@@ -59,19 +63,14 @@ def build_buttons(settings: dict):
         ],
     ]
 
+    return rich, buttons
+
 
 async def cmd_settings(event) -> None:
     telegram_id, settings = await user_from_event(event)
 
-    await send_rich_message(
-        event.client,
-        event.chat_id,
-        title="Search settings",
-        body=describe(settings),
-        footer="These apply to searches here. The web app keeps its own controls.",
-        buttons=build_buttons(settings),
-        user_id=telegram_id,
-    )
+    rich, buttons = build_settings_view(settings)
+    await send_rich_message(event.client, event.chat_id, rich, buttons, user_id=telegram_id)
 
 
 async def _apply(event, changes: dict, note: str) -> None:
@@ -80,14 +79,8 @@ async def _apply(event, changes: dict, note: str) -> None:
     settings.update(changes)
     await sb.save_settings(telegram_id, settings)
 
-    await edit_rich_message(
-        event,
-        title="Search settings",
-        body=describe(settings),
-        footer="These apply to searches here. The web app keeps its own controls.",
-        buttons=build_buttons(settings),
-        user_id=telegram_id,
-    )
+    rich, buttons = build_settings_view(settings)
+    await edit_rich_message(event.client, event, rich, buttons, user_id=telegram_id)
     await event.answer(note)
 
 

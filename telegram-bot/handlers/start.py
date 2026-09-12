@@ -11,27 +11,47 @@ from config import DONATION_URL, WEB_APP_URL
 from handlers import callbacks
 from handlers.common import user_from_event
 from handlers.linking import complete_link
-from richtext import ActionButton, UrlButton, edit_rich_message, send_rich_message
-
-ABOUT = (
-    "Find LTA bicycle parking anywhere in Singapore, straight from chat.\n\n"
-    "<b>Search by sending a message</b>\n"
-    "Send an address, a postal code or a place name and you get the nearest "
-    "racks back. Share your location instead and you get whatever is closest "
-    "to where you are standing.\n\n"
-    "<b>Keep the ones you use</b>\n"
-    "Tap the star on any result to save it. Saved spots live under /fav and "
-    "sync with the web app once the two are linked.\n\n"
-    "<b>Commands</b>\n"
-    "/fav lists everything you have saved\n"
-    "/link connects a browser so favourites sync both ways\n"
-    "/unlink disconnects every browser and keeps both copies\n"
-    "/settings sets your search radius, shelter filter and result count\n"
-    "/status shows what is linked and what is saved\n"
-    "/start shows this message again"
+from richtext import (
+    ActionButton,
+    Bullets,
+    Section,
+    Subheading,
+    UrlButton,
+    compose,
+    edit_rich_message,
+    send_rich_message,
 )
 
-FOOTER = "Locations come from LTA DataMall and are updated monthly. This is a directory, not live availability."
+ABOUT = compose(
+    "Bicycle parking in Singapore",
+    "Find LTA bicycle parking anywhere in Singapore, straight from chat.",
+    Section(
+        "Search by sending a message",
+        "Send an address, a postal code or a place name and you get the nearest "
+        "racks back. Share your location instead and you get whatever is closest "
+        "to where you are standing.",
+    ),
+    Section(
+        "Keep the ones you use",
+        "Tap the star on any result to save it. Saved spots live under /fav and "
+        "sync with the web app once the two are linked.",
+    ),
+    Subheading("Commands"),
+    Bullets(
+        [
+            "/fav lists everything you have saved",
+            "/link connects a browser so favourites sync both ways",
+            "/unlink disconnects every browser and keeps both copies",
+            "/settings sets your search radius, shelter filter and result count",
+            "/status shows what is linked and what is saved",
+            "/start shows this message again",
+        ]
+    ),
+    footer=(
+        "Locations come from LTA DataMall and are updated monthly. "
+        "This is a directory, not live availability."
+    ),
+)
 
 
 def start_buttons(telegram_id: int):
@@ -55,25 +75,14 @@ async def cmd_start(event) -> None:
         return
 
     await send_rich_message(
-        client,
-        event.chat_id,
-        title="Bicycle parking in Singapore",
-        body=ABOUT,
-        footer=FOOTER,
-        buttons=start_buttons(telegram_id),
-        user_id=telegram_id,
+        client, event.chat_id, ABOUT, start_buttons(telegram_id), user_id=telegram_id
     )
 
 
 @callbacks.on("start.show")
 async def cb_start(event, payload, action) -> None:
     await edit_rich_message(
-        event,
-        title="Bicycle parking in Singapore",
-        body=ABOUT,
-        footer=FOOTER,
-        buttons=start_buttons(event.sender_id),
-        user_id=event.sender_id,
+        event.client, event, ABOUT, start_buttons(event.sender_id), user_id=event.sender_id
     )
     await event.answer()
 

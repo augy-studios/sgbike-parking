@@ -1,5 +1,7 @@
 # Telethon 1.x. The 2.x line changed the API surface and this bot targets 1.x.
-Telethon>=1.36,<2.0
+# 1.44 is the first release whose TL layer carries rich_message on the send
+# and edit requests, which is what makes headings and tables render natively.
+Telethon>=1.44.0,<2.0
 
 # Faster crypto for Telethon. Optional, but worth having on a VPS.
 cryptg>=0.4.0

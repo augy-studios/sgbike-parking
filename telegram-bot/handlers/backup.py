@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 import database
 import supabase_client as sb
 from handlers import callbacks
-from richtext import ActionButton, edit_rich_message, send_rich_message
+from richtext import ActionButton, compose, edit_rich_message, send_rich_message
 
 log = logging.getLogger(__name__)
 
@@ -68,22 +68,22 @@ def make_poll_job(client):
             telegram_id = int(request["telegram_id"])
 
             try:
-                message = await send_rich_message(
+                message_id = await send_rich_message(
                     client,
                     telegram_id,
-                    title="Approve new backup codes?",
-                    body=(
+                    compose(
+                        "Approve new backup codes?",
                         "Someone using your linked browser has asked for a new set "
-                        "of backup codes.\n\n"
+                        "of backup codes.",
                         "Backup codes restore your favourites onto a new browser "
                         "without needing Telegram at all, so only approve this if "
-                        "it was you.\n\n"
+                        "it was you.",
                         "Approving cancels any codes you were given before. The new "
                         "set is shown in the browser once and cannot be retrieved "
-                        "again."
+                        "again.",
+                        footer="This request expires in ten minutes.",
                     ),
-                    footer="This request expires in ten minutes.",
-                    buttons=[
+                    [
                         [
                             ActionButton("Approve", "backup.approve", {"request_id": request_id}),
                             ActionButton("Decline", "backup.decline", {"request_id": request_id}),
@@ -101,8 +101,8 @@ def make_poll_job(client):
             await sb.mark_backup_request(
                 request_id,
                 "notified",
-                chat_id=message.chat_id,
-                message_id=message.id,
+                chat_id=telegram_id,
+                message_id=message_id,
             )
 
     return poll
@@ -124,12 +124,17 @@ def make_housekeeping_job():
 async def _decide(event, request_id: str, approve: bool) -> None:
     request = await sb.get_backup_request(request_id)
 
+    async def replace_prompt(rich: dict) -> None:
+        # Every outcome replaces the prompt and drops its Approve and Decline
+        # buttons, so a decision cannot be tapped twice.
+        await edit_rich_message(event.client, event, rich, user_id=event.sender_id)
+
     if request is None:
-        await edit_rich_message(
-            event,
-            title="Request not found",
-            body="That request is no longer on record. Nothing was changed.",
-            user_id=event.sender_id,
+        await replace_prompt(
+            compose(
+                "Request not found",
+                "That request is no longer on record. Nothing was changed.",
+            )
         )
         await event.answer()
         return
@@ -141,29 +146,25 @@ async def _decide(event, request_id: str, approve: bool) -> None:
         return
 
     if request["status"] not in {"pending", "notified"}:
-        await edit_rich_message(
-            event,
-            title="Already handled",
-            body=(
+        await replace_prompt(
+            compose(
+                "Already handled",
                 "This request has already been dealt with. If you still need "
-                "backup codes, start again from the web app."
-            ),
-            user_id=event.sender_id,
+                "backup codes, start again from the web app.",
+            )
         )
         await event.answer()
         return
 
     if _expired(request.get("expires_at")):
         await sb.mark_backup_request(request_id, "expired")
-        await edit_rich_message(
-            event,
-            title="Request expired",
-            body=(
+        await replace_prompt(
+            compose(
+                "Request expired",
                 "This request sat unanswered for more than ten minutes, so it "
                 "has lapsed. Start it again from the web app if you still want "
-                "the codes."
-            ),
-            user_id=event.sender_id,
+                "the codes.",
+            )
         )
         await event.answer()
         return
@@ -171,29 +172,25 @@ async def _decide(event, request_id: str, approve: bool) -> None:
     await sb.mark_backup_request(request_id, "approved" if approve else "declined")
 
     if approve:
-        await edit_rich_message(
-            event,
-            title="Approved",
-            body=(
+        await replace_prompt(
+            compose(
+                "Approved",
                 "Your new backup codes are on their way to the browser that asked "
                 "for them. They are shown once, so save them somewhere safe and "
-                "offline.\n\n"
-                "Any codes issued before this moment no longer work."
-            ),
-            user_id=event.sender_id,
+                "offline.",
+                "Any codes issued before this moment no longer work.",
+            )
         )
         await event.answer("Approved")
     else:
-        await edit_rich_message(
-            event,
-            title="Declined",
-            body=(
+        await replace_prompt(
+            compose(
+                "Declined",
                 "No codes were created and nothing changed. Your existing codes, "
-                "if you have any, still work.\n\n"
+                "if you have any, still work.",
                 "If this was not you, consider running /unlink to disconnect "
-                "every browser, then linking again from a device you trust."
-            ),
-            user_id=event.sender_id,
+                "every browser, then linking again from a device you trust.",
+            )
         )
         await event.answer("Declined")
 

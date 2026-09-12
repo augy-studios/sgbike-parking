@@ -22,7 +22,15 @@ import supabase_client as sb
 from config import WEB_APP_URL
 from handlers import callbacks
 from handlers.common import user_from_event
-from richtext import ActionButton, UrlButton, edit_rich_message, send_rich_message
+from richtext import (
+    ActionButton,
+    Steps,
+    Table,
+    UrlButton,
+    compose,
+    edit_rich_message,
+    send_rich_message,
+)
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +50,39 @@ TOKEN_ERRORS = {
 }
 
 
+def _browsers(count: int) -> str:
+    return f"{count} browser{'' if count == 1 else 's'}"
+
+
+def build_linked_view(result: dict) -> tuple[dict, list]:
+    """The report after a successful merge."""
+    merged = int(result.get("merged") or 0)
+    duplicates = int(result.get("duplicates") or 0)
+    total = int(result.get("total") or 0)
+    devices = int(result.get("devices") or 0)
+
+    rows = []
+    if merged:
+        rows.append(["Brought over from that browser", merged])
+    if duplicates:
+        rows.append(["Already saved here, so skipped", duplicates])
+    rows.append(["Total favourites now", total])
+    rows.append(["Browsers connected", devices])
+
+    rich = compose(
+        "Linked",
+        "Your browser and this chat now share one set of favourites. "
+        "Anything you star in either place shows up in the other.",
+        Table(["Count"], rows),
+        footer="Link as many browsers as you like. Each one needs its own link.",
+    )
+    buttons = [
+        [ActionButton("View favourites", "fav.list", {"page": 0})],
+        [UrlButton("Open the web app", WEB_APP_URL)],
+    ]
+    return rich, buttons
+
+
 async def complete_link(client, event, token: str) -> None:
     """Redeem a start payload and report what the merge did."""
     sender = await event.get_sender()
@@ -59,10 +100,10 @@ async def complete_link(client, event, token: str) -> None:
         await send_rich_message(
             client,
             event.chat_id,
-            title="Linking did not go through",
-            body=(
+            compose(
+                "Linking did not go through",
                 "Something went wrong while connecting your browser. Nothing was "
-                "changed. Please try the link again in a moment."
+                "changed. Please try the link again in a moment.",
             ),
             user_id=telegram_id,
         )
@@ -73,83 +114,57 @@ async def complete_link(client, event, token: str) -> None:
         await send_rich_message(
             client,
             event.chat_id,
-            title="That link did not work",
-            body=TOKEN_ERRORS.get(reason, TOKEN_ERRORS["unknown_token"]),
-            buttons=[[UrlButton("Open the web app", WEB_APP_URL)]],
+            compose(
+                "That link did not work",
+                TOKEN_ERRORS.get(reason, TOKEN_ERRORS["unknown_token"]),
+            ),
+            [[UrlButton("Open the web app", WEB_APP_URL)]],
             user_id=telegram_id,
         )
         return
 
-    merged = int(result.get("merged") or 0)
-    duplicates = int(result.get("duplicates") or 0)
-    total = int(result.get("total") or 0)
-    devices = int(result.get("devices") or 0)
+    rich, buttons = build_linked_view(result)
+    await send_rich_message(client, event.chat_id, rich, buttons, user_id=telegram_id)
 
-    lines = []
-    if merged:
-        lines.append(f"Brought over from that browser: <b>{merged}</b>")
-    if duplicates:
-        lines.append(f"Already saved here, so skipped: <b>{duplicates}</b>")
-    lines.append(f"Total favourites now: <b>{total}</b>")
-    lines.append(
-        f"Browsers connected: <b>{devices}</b>"
-        if devices != 1
-        else "Browsers connected: <b>1</b>"
-    )
 
-    await send_rich_message(
-        client,
-        event.chat_id,
-        title="Linked",
-        body=(
-            "Your browser and this chat now share one set of favourites. "
-            "Anything you star in either place shows up in the other.\n\n"
-            + "\n".join(lines)
-        ),
-        footer="Link as many browsers as you like. Each one needs its own link.",
-        buttons=[
-            [ActionButton("View favourites", "fav.list", {"page": 0})],
-            [UrlButton("Open the web app", WEB_APP_URL)],
-        ],
-        user_id=telegram_id,
-    )
+def build_link_view(devices: int) -> tuple[dict, list]:
+    """/link explains where the link is started, because the site mints it."""
+    if devices:
+        rich = compose(
+            "Sync your favourites",
+            f"You already have {_browsers(devices)} connected.",
+            "To add another one, open the web app on that device, tap the sync "
+            "button in the header and choose Link Telegram. It will send you "
+            "back here to confirm.",
+        )
+    else:
+        rich = compose(
+            "Sync your favourites",
+            "Linking is started from the web app so it knows which browser to "
+            "connect.",
+            Steps(
+                [
+                    "Open the web app on the device you want to sync.",
+                    "Tap the sync button in the header.",
+                    "Choose Link Telegram.",
+                ]
+            ),
+            "You will be sent back here to finish. Favourites already saved in "
+            "that browser and any saved here are merged into one list, with "
+            "duplicates left out.",
+        )
+
+    return rich, [[UrlButton("Open the web app", WEB_APP_URL)]]
 
 
 async def cmd_link(event) -> None:
-    """/link explains where the link is started, because the site mints it."""
     client = event.client
     telegram_id, _ = await user_from_event(event)
 
     devices = await sb.count_linked_devices(telegram_id)
 
-    if devices:
-        body = (
-            f"You already have <b>{devices}</b> browser"
-            f"{'' if devices == 1 else 's'} connected.\n\n"
-            "To add another one, open the web app on that device, tap the sync "
-            "button in the header and choose Link Telegram. It will send you "
-            "back here to confirm."
-        )
-    else:
-        body = (
-            "Linking is started from the web app so it knows which browser to "
-            "connect.\n\n"
-            "<b>1.</b> Open the web app on the device you want to sync.\n"
-            "<b>2.</b> Tap the sync button in the header.\n"
-            "<b>3.</b> Choose Link Telegram.\n\n"
-            "You will be sent back here to finish. Favourites already saved in "
-            "that browser and any saved here are merged into one list, with "
-            "duplicates left out."
-        )
-
-    await send_rich_message(
-        client,
-        event.chat_id,
-        title="Sync your favourites",
-        body=body,
-        buttons=[[UrlButton("Open the web app", WEB_APP_URL)]],
-        user_id=telegram_id,
-    )
+    rich, buttons = build_link_view(devices)
+    await send_rich_message(client, event.chat_id, rich, buttons, user_id=telegram_id)
 
 
 async def cmd_unlink(event) -> None:
@@ -163,10 +178,10 @@ async def cmd_unlink(event) -> None:
         await send_rich_message(
             client,
             event.chat_id,
-            title="Nothing to unlink",
-            body=(
+            compose(
+                "Nothing to unlink",
                 "No browser is connected to this chat at the moment. Your "
-                "favourites here are unaffected."
+                "favourites here are unaffected.",
             ),
             user_id=telegram_id,
         )
@@ -175,15 +190,14 @@ async def cmd_unlink(event) -> None:
     await send_rich_message(
         client,
         event.chat_id,
-        title="Remove the link?",
-        body=(
-            f"This disconnects <b>{devices}</b> browser"
-            f"{'' if devices == 1 else 's'} from this chat.\n\n"
+        compose(
+            "Remove the link?",
+            f"This disconnects {_browsers(devices)} from this chat.",
             "Nothing is deleted. Each browser keeps its own copy of the current "
             "list, and your favourites stay here too. From then on the two "
-            "stop syncing and drift apart independently."
+            "stop syncing and drift apart independently.",
         ),
-        buttons=[
+        [
             [
                 ActionButton("Yes, unlink", "unlink.confirm", {}),
                 ActionButton("Keep it linked", "unlink.cancel", {}),
@@ -199,15 +213,15 @@ async def cb_unlink_confirm(event, payload, action) -> None:
     devices = int((result or {}).get("devices") or 0)
 
     await edit_rich_message(
+        event.client,
         event,
-        title="Unlinked",
-        body=(
-            f"Disconnected <b>{devices}</b> browser"
-            f"{'' if devices == 1 else 's'}. Each one kept a copy of the list, "
-            "and your favourites here are untouched.\n\n"
-            "You can link again at any time from the web app."
+        compose(
+            "Unlinked",
+            f"Disconnected {_browsers(devices)}. Each one kept a copy of the "
+            "list, and your favourites here are untouched.",
+            "You can link again at any time from the web app.",
         ),
-        buttons=[[UrlButton("Open the web app", WEB_APP_URL)]],
+        [[UrlButton("Open the web app", WEB_APP_URL)]],
         user_id=event.sender_id,
     )
     await event.answer("Unlinked")
@@ -216,9 +230,12 @@ async def cb_unlink_confirm(event, payload, action) -> None:
 @callbacks.on("unlink.cancel")
 async def cb_unlink_cancel(event, payload, action) -> None:
     await edit_rich_message(
+        event.client,
         event,
-        title="Still linked",
-        body="Nothing changed. Your browsers and this chat carry on sharing one list.",
+        compose(
+            "Still linked",
+            "Nothing changed. Your browsers and this chat carry on sharing one list.",
+        ),
         user_id=event.sender_id,
     )
     await event.answer("Left as it was")

@@ -1,11 +1,19 @@
 """Message composition and the persistent button layer.
 
-send_rich_message is the single way this bot talks. Telethon has no method by
-that name, so it is defined here: a small wrapper that lays out a title, a
-body, an optional footer, and a set of inline buttons, sends it as HTML, and
-records every button in SQLite so it keeps working after a restart.
+Every structured message this bot sends is a genuine Telegram Rich Message:
+a heading, paragraphs, subheadings, bullet lists and pipe tables that a
+current client renders natively. The raw MTProto calls live in reply.py. This
+module sits on top of them and does two things:
 
-Why buttons go through the database
+Composition
+    A message is described once, as a title plus a list of blocks, and
+    compose() renders it twice: as Telegram's Rich Markdown dialect and as
+    plain text. The plain text is the fallback that fills the request's
+    required message field, so an old client or a rejected payload still
+    shows the same information. Building both from one description is what
+    stops the two drifting apart.
+
+Buttons through the database
     Telegram carries at most 64 bytes of callback data on a button, which is
     not enough for a parking record. So the payload is stored locally and only
     a short token travels on the wire, in the form b:<token>. The rows are
@@ -19,19 +27,175 @@ House style
 
 from __future__ import annotations
 
-import html
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 from urllib.parse import quote
 
 from telethon import Button
 
 import database
+import reply
 
 log = logging.getLogger(__name__)
 
 CALLBACK_PREFIX = "b:"
+
+
+# ---------------------------------------------------------------------------
+# Escaping
+# ---------------------------------------------------------------------------
+
+_MD_SPECIAL = re.compile(r"([\\*_~`|\[\]#>=])")
+
+
+def escape_md(text: Any) -> str:
+    """Escape user/data text for Telegram's Rich Markdown dialect."""
+    return _MD_SPECIAL.sub(r"\\\1", str(text))
+
+
+def escape_cell(text: Any) -> str:
+    """Escape for a GFM table cell; also flattens newlines so the row stays intact."""
+    return escape_md(str(text).replace("\n", " "))
+
+
+# ---------------------------------------------------------------------------
+# Blocks
+# ---------------------------------------------------------------------------
+#
+# Each block renders itself both ways. Anything a person or an upstream API
+# supplied is escaped on the markdown side, and literal markup is only ever
+# written here, never at a call site.
+
+@dataclass
+class Para:
+    """A paragraph.
+
+    The text is plain prose and is escaped for the markdown rendering. When a
+    paragraph needs emphasis inside it, pass the markdown rendering explicitly
+    as md, escaping the dynamic parts yourself.
+    """
+
+    text: str
+    md: str | None = None
+
+    def markdown(self) -> str:
+        return self.md if self.md is not None else escape_md(self.text)
+
+    def plain(self) -> str:
+        return self.text
+
+
+@dataclass
+class Subheading:
+    text: str
+
+    def markdown(self) -> str:
+        return f"## {escape_md(self.text)}"
+
+    def plain(self) -> str:
+        return self.text
+
+
+@dataclass
+class Section:
+    """A subheading with one paragraph directly under it."""
+
+    title: str
+    text: str
+
+    def markdown(self) -> str:
+        return f"## {escape_md(self.title)}\n{escape_md(self.text)}"
+
+    def plain(self) -> str:
+        return f"{self.title}\n{self.text}"
+
+
+@dataclass
+class Bullets:
+    items: Sequence[str]
+
+    def markdown(self) -> str:
+        return "\n".join(f"- {escape_md(item)}" for item in self.items)
+
+    def plain(self) -> str:
+        return "\n".join(f"• {item}" for item in self.items)
+
+
+@dataclass
+class Steps:
+    """A numbered list."""
+
+    items: Sequence[str]
+
+    def markdown(self) -> str:
+        return "\n".join(f"{n}. {escape_md(item)}" for n, item in enumerate(self.items, 1))
+
+    def plain(self) -> str:
+        return "\n".join(f"{n}. {item}" for n, item in enumerate(self.items, 1))
+
+
+@dataclass
+class Table:
+    """A pipe table with a label column.
+
+    Every row starts with its label, then carries one cell per header. The
+    corner cell above the labels is left empty, and labels are set in bold so
+    a row can be picked out at a glance.
+    """
+
+    headers: Sequence[str]
+    rows: Sequence[Sequence[Any]]
+
+    def markdown(self) -> str:
+        lines = [
+            "| " + " | ".join(["", *(escape_cell(h) for h in self.headers)]) + " |",
+            "| " + " | ".join(["---"] * (len(self.headers) + 1)) + " |",
+        ]
+        for label, *values in self.rows:
+            cells = [f"**{escape_cell(label)}**", *(escape_cell(v) for v in values)]
+            lines.append("| " + " | ".join(cells) + " |")
+        return "\n".join(lines)
+
+    def plain(self) -> str:
+        lines = []
+        for label, *values in self.rows:
+            if len(self.headers) == 1:
+                lines.append(f"{label}: {values[0]}")
+            else:
+                pairs = ", ".join(f"{h} {v}" for h, v in zip(self.headers, values))
+                lines.append(f"{label}: {pairs}")
+        return "\n".join(lines)
+
+
+Block = Para | Subheading | Section | Bullets | Steps | Table
+
+
+def compose(title: str | None, *blocks: Block | str, footer: str | None = None) -> dict:
+    """Render a title, some blocks and an optional footer both ways.
+
+    Returns the message contract reply.py expects:
+    {"markdown": ..., "fallback": ...}. A bare string is a paragraph.
+    """
+    markdown: list[str] = []
+    plain: list[str] = []
+
+    if title:
+        markdown.append(f"# {escape_md(title)}")
+        plain.append(title)
+
+    for block in blocks:
+        if isinstance(block, str):
+            block = Para(block)
+        markdown.append(block.markdown())
+        plain.append(block.plain())
+
+    if footer:
+        markdown.append(f"_{escape_md(footer)}_")
+        plain.append(footer)
+
+    return {"markdown": "\n\n".join(markdown), "fallback": "\n\n".join(plain)}
 
 
 # ---------------------------------------------------------------------------
@@ -90,99 +254,55 @@ def build_buttons(
 
 
 # ---------------------------------------------------------------------------
-# Text composition
-# ---------------------------------------------------------------------------
-
-def esc(value: Any) -> str:
-    """Escape anything that came from a user or from an upstream API."""
-    return html.escape(str(value), quote=False)
-
-
-def compose(title: str | None, body: str, footer: str | None = None) -> str:
-    parts: list[str] = []
-    if title:
-        parts.append(f"<b>{title}</b>")
-    if body:
-        parts.append(body)
-    if footer:
-        parts.append(f"<i>{footer}</i>")
-    return "\n\n".join(parts)
-
-
-def bullet_list(lines: Iterable[str]) -> str:
-    return "\n".join(f"• {line}" for line in lines)
-
-
-# ---------------------------------------------------------------------------
 # Sending
 # ---------------------------------------------------------------------------
 
 async def send_rich_message(
     client,
     entity,
-    *,
-    title: str | None = None,
-    body: str = "",
-    footer: str | None = None,
+    rich: dict,
     buttons: ButtonRows | None = None,
-    reply_to: int | None = None,
-    link_preview: bool = False,
+    *,
     user_id: int | None = None,
-):
-    """Send a formatted message and remember its buttons.
+) -> int | None:
+    """Send a composed message and remember its buttons.
 
-    Returns the sent message so callers can keep hold of the id.
+    Returns the id of the message that went out, or None if Telegram did not
+    say, so callers that need to edit it later can keep hold of it.
     """
-    chat_id = getattr(entity, "id", entity) if not isinstance(entity, int) else entity
+    chat_id = entity if isinstance(entity, int) else getattr(entity, "id", None)
     telethon_buttons, tokens = build_buttons(buttons, user_id=user_id, chat_id=chat_id)
 
-    message = await client.send_message(
-        entity,
-        compose(title, body, footer),
-        parse_mode="html",
-        buttons=telethon_buttons,
-        reply_to=reply_to,
-        link_preview=link_preview,
-    )
+    result = await reply.send_rich_message(client, entity, rich, telethon_buttons)
+    message_id = reply.sent_message_id(result)
 
-    if tokens:
-        database.attach_buttons_to_message(tokens, message.chat_id, message.id)
+    if tokens and chat_id is not None and message_id is not None:
+        database.attach_buttons_to_message(tokens, chat_id, message_id)
 
-    return message
+    return message_id
 
 
 async def edit_rich_message(
-    event_or_message,
-    *,
-    title: str | None = None,
-    body: str = "",
-    footer: str | None = None,
+    client,
+    event,
+    rich: dict,
     buttons: ButtonRows | None = None,
-    link_preview: bool = False,
+    *,
     user_id: int | None = None,
-):
-    """Rewrite a message in place, replacing whatever buttons it carried.
+) -> None:
+    """Rewrite the message a button was tapped on, replacing its buttons.
 
     Used by callback handlers so a tap updates the message that was tapped
-    rather than piling another one into the chat.
+    rather than piling another one into the chat. With no buttons the old
+    keyboard is removed.
     """
     telethon_buttons, tokens = build_buttons(buttons, user_id=user_id)
 
-    message = await event_or_message.edit(
-        compose(title, body, footer),
-        parse_mode="html",
-        buttons=telethon_buttons,
-        link_preview=link_preview,
-    )
+    await reply.edit_rich_message(client, event, rich, telethon_buttons)
 
-    # An edit on a CallbackQuery returns the updated message, but not always.
-    if tokens and message is not None:
-        chat_id = getattr(message, "chat_id", None)
-        message_id = getattr(message, "id", None)
-        if chat_id and message_id:
-            database.attach_buttons_to_message(tokens, chat_id, message_id)
-
-    return message
+    # An inline-mode message has no chat and message id to record against.
+    if tokens and isinstance(event.query.msg_id, int):
+        database.attach_buttons_to_message(tokens, event.chat_id, event.query.msg_id)
 
 
 # ---------------------------------------------------------------------------
@@ -207,10 +327,3 @@ def citymapper_url(spot: dict) -> str:
 def waze_url(spot: dict) -> str:
     lat, lng = spot.get("latitude"), spot.get("longitude")
     return f"https://waze.com/ul?ll={lat}%2C{lng}&navigate=yes"
-
-
-def truncate(text: str, limit: int = 3800) -> str:
-    """Telegram caps a message at 4096 characters. Leave room for markup."""
-    if len(text) <= limit:
-        return text
-    return text[: limit - 1].rstrip() + "…"
