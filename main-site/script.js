@@ -72,19 +72,33 @@ function buildThemeModal() {
         applyMode(btn.dataset.mode);
         syncThemeModalState();
     });
+
+    // A tab left open across 09:00 or 18:00 re-resolves itself; redraw the
+    // modal so the note and pressed state stay in step with the change.
+    document.addEventListener('uwu:modechange', syncThemeModalState);
 }
 
 function syncThemeModalState() {
     const activeTheme = getStoredColorTheme();
-    const activeMode = getStoredMode();
+    const activePreference = getModePreference();
+    const resolvedMode = getStoredMode();
     document.querySelectorAll('#swatchGrid .swatch').forEach((el) => {
         el.classList.toggle('active', el.dataset.themeId === activeTheme);
     });
     document.querySelectorAll('#modeToggle .mode-btn').forEach((el) => {
-        const on = el.dataset.mode === activeMode;
+        const on = el.dataset.mode === activePreference;
         el.classList.toggle('active', on);
         el.setAttribute('aria-pressed', String(on));
     });
+
+    const note = $('modeNote');
+    if (note) {
+        note.hidden = activePreference !== 'time';
+        if (activePreference === 'time') {
+            note.textContent = `Following the clock. Currently ${resolvedMode}.`;
+        }
+    }
+
     updateThemeButtonIcon();
 }
 
@@ -967,11 +981,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
 });
-
-// ── Service worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
 
 // ── Init
 (function init() {
